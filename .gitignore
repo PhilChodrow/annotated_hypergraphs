@@ -1,3 +1,7 @@
 .ipynb_checkpoints
 data
 *.pyc
+.cache
+__pycache__
+.vscode
+.noseids
