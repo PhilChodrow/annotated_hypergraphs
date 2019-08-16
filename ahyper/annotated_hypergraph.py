@@ -75,6 +75,6 @@ def bipartite_edge_swap(e0, e1):
 def swap_step(il):
     n = len(il)
     i,j = np.random.randint(0, n, 2)
-    while i == j:
-        i,j = np.random.randint(0, n, 2)
+    while il[i][2] == il[j][2]: 
+        i,j = np.random.randint(0, n, 2)        
     il[i], il[j] = bipartite_edge_swap(il[i], il[j])
