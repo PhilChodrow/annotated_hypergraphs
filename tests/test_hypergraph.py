@@ -1,7 +1,7 @@
 from unittest import TestCase
 from data_loader import DATA, ROLE_FIELDS
 
-from ahyper.annotated_hypergraph import annotated_hypergraph
+from ahyper.annotated_hypergraph import AnnotatedHypergraph
 
 class ConstructionTests(TestCase):
     """
@@ -12,8 +12,7 @@ class ConstructionTests(TestCase):
         """
         """
     
-        A = annotated_hypergraph(DATA, ROLE_FIELDS)
-
+        A = AnnotatedHypergraph(DATA, ROLE_FIELDS)
 
 class MCMCTests(TestCase):
     """
@@ -21,7 +20,7 @@ class MCMCTests(TestCase):
     """
 
     def setUp(self):
-        self.A = annotated_hypergraph(DATA, ROLE_FIELDS)
+        self.A = AnnotatedHypergraph(DATA, ROLE_FIELDS)
 
     def tearDown(self):
         self.A = None
@@ -57,6 +56,6 @@ class MCMCTests(TestCase):
 
         il_after = self.A.get_IL()
 
-        diff = sum([x[0]!=y[0] for x,y in zip(il_before, il_after)])
+        diff = sum([x.nid!=y.nid for x,y in zip(il_before, il_after)])
         
         self.assertGreater(diff, 0)
