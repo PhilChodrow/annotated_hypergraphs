@@ -1,7 +1,7 @@
 from itertools import groupby
 from collections import Counter
 
-import pandas as pd
+from .utils import normalise_counters
 
 def local_role_density(annotated_hypergraph, include_focus=False):
     """
@@ -30,9 +30,13 @@ def local_role_density(annotated_hypergraph, include_focus=False):
         densities[node] = densities.get(node, Counter()) + by_edge[edge]
         
         if not include_focus:
-            densities[node] = densities.get(node, Counter()) - Counter([role])
-            
-    densities = pd.DataFrame(densities).T.fillna(0)
-    densities = densities.div(densities.sum(axis=1), axis=0)
+    keys = set(chain.from_iterable(densities.values()))
+    for item in densities.values():
+        item.update({key:0 for key in keys if key not in item})
 
-    return densities
+    if absolute_values:
+        return densities
+    
+    else:
+        normalise_counters(densities)
+        return densities

@@ -36,3 +36,10 @@ def records_from_incidence_list(IL, role_fields):
         records.append(record)
     
     return(records)
+
+def normalise_counters(counters):
+    """Normalise a dictionary of counters inplace."""
+    for d in counters.values():
+        total = sum(d.values())
+        for key in d:
+            d[key] /= total
