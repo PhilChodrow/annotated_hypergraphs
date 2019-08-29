@@ -1,5 +1,7 @@
 from .utils import *
-from collections import Counter
+
+from collections import Counter, defaultdict
+from itertools import permutations
 
 class AnnotatedHypergraph(object):
     
@@ -32,6 +34,7 @@ class AnnotatedHypergraph(object):
         self.edge_list = np.unique([e.eid for e in self.IL])
         self.n = len(self.node_list)
         self.m = len(self.edge_list)
+        self.R = None
         
     def get_node_list(self):
         """"""
@@ -88,7 +91,59 @@ class AnnotatedHypergraph(object):
         else:
             E = [e.eid for e in self.IL]
             return(Counter(E))
-    
+
+    def assign_role_interaction_matrix(self, R=None):
+        """
+        Assigns a role-interaction matrix to the annotated hypergraph.
+
+        The R_ij defines the weight which a node in role i interacts with a node in role j
+        when they belong to the same edge.
+
+        Input:
+            R (np.array): An array with role interaction weights. Must be of the same length
+                          and in the same order as AnnotatedHypergraph.roles.
+
+        TODO: Extend this to allow edge-dependent role-interaction matrices.
+        """
+
+        num_roles = len(self.roles)
+        if R is not None:
+            assert R.shape[0] == num_roles
+            assert R.shape[1] == num_roles
+            self.R = R
+        else:
+            self.R = np.ones(shape=(num_roles,num_roles))
+
+    def to_weighted_projection(self):
+        """
+        Projects an annotated hypergraph to a weighted, directed graph.
+
+        If role-interaction matrix has not been defined (through
+        self.assign_role_interaction_matrix) then all interactions will be assigned a
+        weight of one.
+
+        Input:
+            None
+        
+        Output:
+            weighted_edges (dict): A dictionary containing all source nodes as keys.
+                                   The values are dictionaries of targets which in turn
+                                   contain weights of interaction.
+        """
+        weighted_edges = defaultdict(lambda: defaultdict(lambda: 0.0))
+        role_map = {role:ix for ix,role in enumerate(self.roles)}
+
+        # Default behaviour if R has not been defined.
+        if self.R is None:
+            self.assign_role_interaction_matrix()
+
+        for eid, edge in groupby(self.get_IL(), lambda x: x.eid):
+            edge = list(edge)
+            for a,b in permutations(edge, 2):
+                weighted_edges[a.nid][b.nid] += self.R[role_map[a.role], role_map[b.role]]
+
+        return weighted_edges
+
 def bipartite_edge_swap(e0, e1):
     """
     Creates two new swapped edges by permuting the node ids.
