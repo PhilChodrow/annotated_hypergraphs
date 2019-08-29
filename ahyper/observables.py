@@ -41,3 +41,54 @@ def local_role_density(annotated_hypergraph, include_focus=False, absolute_value
     else:
         normalise_counters(densities)
         return densities
+
+def degree_centrality(annotated_hypergraph):
+    """
+    Returns the weighted degree centrality for each node in an annotated hypergraph
+    with a defined role-interaction matrix.
+
+    Note: For stylistic purposes we recreate the weighted adjacency graph for each centrality. 
+          This can easily be factored out.
+
+    Input:
+        annotated_hypergraph [AnnotatedHypergraph]: An annotated hypergraph.
+    
+    Output:
+        degrees:
+    """
+
+    weighted_edges = annotated_hypergraph.to_weighted_projection()
+
+    return {key:sum(targets.values()) for key,targets in weighted_edges.items()}
+
+def eigenvector_centrality(annotated_hypergraph):
+    """
+    Returns the weighted eigenvector centrality for each node in an annotated hypergraph
+    with a defined role-interaction matrix.
+
+    Note: For stylistic purposes we recreate the weighted adjacency graph for each centrality. 
+          This can easily be factored out.
+
+    Input:
+        annotated_hypergraph [AnnotatedHypergraph]: An annotated hypergraph.
+    
+    Output:
+        degrees:
+    """
+    raise NotImplementedError
+
+def modularity(annotated_hypergraph, return_communities=False):
+    """
+    Returns the optimal modularity score for an annotated hypergraph
+    with a defined role-interaction matrix.
+
+    Note: For stylistic purposes we recreate the weighted adjacency graph for each centrality. 
+          This can easily be factored out.
+
+    Input:
+        annotated_hypergraph [AnnotatedHypergraph]: An annotated hypergraph.
+    
+    Output:
+        degrees:
+    """
+    raise NotImplementedError
