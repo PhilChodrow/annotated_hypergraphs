@@ -1,6 +1,8 @@
 from itertools import groupby, chain
 from collections import Counter
 
+import networkx as nx
+
 from .utils import normalise_counters
 
 def local_role_density(annotated_hypergraph, include_focus=False, absolute_values=False):
@@ -54,7 +56,7 @@ def degree_centrality(annotated_hypergraph):
         annotated_hypergraph [AnnotatedHypergraph]: An annotated hypergraph.
     
     Output:
-        degrees:
+        degrees (dict): A dictionary of {node:degree} pairs.
     """
 
     weighted_edges = annotated_hypergraph.to_weighted_projection()
@@ -66,16 +68,26 @@ def eigenvector_centrality(annotated_hypergraph):
     Returns the weighted eigenvector centrality for each node in an annotated hypergraph
     with a defined role-interaction matrix.
 
-    Note: For stylistic purposes we recreate the weighted adjacency graph for each centrality. 
+    Note: For stylistic purposes we recreate the weighted adjacency graph for each centrality,
+          and create a NetworkX DiGraph. 
           This can easily be factored out.
+
+    Note: Using networkx for simplicity at the moment but can migrate to more efficient
+          library if needed.
 
     Input:
         annotated_hypergraph [AnnotatedHypergraph]: An annotated hypergraph.
     
     Output:
-        degrees:
+        eigenvector (dict): A dictionary of {node:eigenvector_centrality} pairs.
     """
-    raise NotImplementedError
+    weighted_edges = annotated_hypergraph.to_weighted_projection()
+    
+    # Conversion to 
+    weighted_edges = {source:{target:{'weight':val} for target,val in values.items()} for source, values in weighted_edges.items()}
+    G = nx.DiGraph(weighted_edges)
+
+    return nx.eigenvector_centrality(G)
 
 def modularity(annotated_hypergraph, return_communities=False):
     """
