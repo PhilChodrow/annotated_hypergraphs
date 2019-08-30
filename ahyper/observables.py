@@ -89,6 +89,32 @@ def eigenvector_centrality(annotated_hypergraph):
 
     return nx.eigenvector_centrality(G)
 
+def pagerank_centrality(annotated_hypergraph):
+    """
+    Returns the weighted PageRank centrality for each node in an annotated hypergraph
+    with a defined role-interaction matrix.
+
+    Note: For stylistic purposes we recreate the weighted adjacency graph for each centrality,
+          and create a NetworkX DiGraph. 
+          This can easily be factored out.
+
+    Note: Using networkx for simplicity at the moment but can migrate to more efficient
+          library if needed.
+
+    Input:
+        annotated_hypergraph [AnnotatedHypergraph]: An annotated hypergraph.
+    
+    Output:
+        pagerank (dict): A dictionary of {node:pagerank_centrality} pairs.
+    """
+    weighted_edges = annotated_hypergraph.to_weighted_projection()
+    
+    # Conversion to 
+    weighted_edges = {source:{target:{'weight':val} for target,val in values.items()} for source, values in weighted_edges.items()}
+    G = nx.DiGraph(weighted_edges)
+
+    return nx.pagerank(G)
+
 def modularity(annotated_hypergraph, return_communities=False):
     """
     Returns the optimal modularity score for an annotated hypergraph

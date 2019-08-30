@@ -2,7 +2,8 @@ from unittest import TestCase, skip
 from data_loader import DATA, ROLE_FIELDS
 
 from ahyper.annotated_hypergraph import AnnotatedHypergraph
-from ahyper.observables import local_role_density, degree_centrality, eigenvector_centrality
+from ahyper.observables import (local_role_density, degree_centrality, 
+                                eigenvector_centrality, pagerank_centrality)
 
 class DensityTests(TestCase):
     """
@@ -65,6 +66,9 @@ class CentralityTests(TestCase):
 
         self.assertAlmostEqual(eigenvector[67], 0.14693461555354528)
 
-    @skip
-    def test_modularity(self):
-        pass
+    def test_pagerank_centrality(self):
+        """ Test the eigenvector centrality calculation. """
+
+        pagerank = pagerank_centrality(self.A)
+
+        self.assertAlmostEqual(pagerank[8], 0.01516827830191012)
