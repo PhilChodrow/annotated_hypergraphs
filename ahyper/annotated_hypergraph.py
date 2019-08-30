@@ -89,6 +89,42 @@ class AnnotatedHypergraph(object):
             E = [e.eid for e in self.IL]
             return(Counter(E))
     
+    def count_degeneracies(self):
+        """Return the number of edges in which the same node appears multiple times"""
+        edges = {e: list(v) for e, v in groupby(self.IL, lambda x: x[2])}
+
+        def check_degenerate(eid):
+            nodes = [v[0] for v in edges[eid]]
+            return(len(set(nodes)) != len(nodes))
+        
+        return(sum([check_degenerate(eid) for eid in self.edge_list]))
+    
+    def remove_degeneracies(self, precedence):
+        '''
+        Removes entries from self.IL in order of precedence until each node appears only once in each edge.
+        Roles with higher precedence are retained.  
+        Precedence: a dict of the form {role : p}, lower p -> higher precedence
+        May be overaggressive in  node removal -- further tests needed. 
+        '''
+        self.IL.sort(key = lambda x: (x.eid, x.nid, precedence[x.role]))
+        grouped = [list(v) for eid, v in groupby(self.IL, lambda x: x.eid)]
+        
+        IL_ = []
+
+        for E in grouped:
+            E_ = []
+            for e in E:
+                if e.nid not in [e.nid for e in E_]:
+                    E_.append(e)
+            IL_.append(E_)
+        
+        IL_ = [e for E in IL_ for e in E]
+            
+        n_removed = len(self.IL) - len(IL_)
+        print('Removed ' + str(n_removed) + ' degeneracies.')
+        self.IL = IL_
+        self.IL.sort(key = lambda x: x.role)
+
 def bipartite_edge_swap(e0, e1):
     """
     Creates two new swapped edges by permuting the node ids.
@@ -102,7 +138,7 @@ def bipartite_edge_swap(e0, e1):
 
     return(f1, f0)
 
-def swap_step(il):
+def swap_step(il, allow_degeneracies = False):
     """
     Swap two node-edge incidence entries in the node-edge incidence list.
 
