@@ -1,8 +1,9 @@
-from unittest import TestCase
+from unittest import TestCase, skip
 from data_loader import DATA, ROLE_FIELDS
 
 from ahyper.annotated_hypergraph import AnnotatedHypergraph
-from ahyper.observables import local_role_density
+from ahyper.observables import (local_role_density, degree_centrality, 
+                                eigenvector_centrality, pagerank_centrality)
 
 class DensityTests(TestCase):
     """
@@ -40,3 +41,34 @@ class DensityTests(TestCase):
 
         for key, entry in density_focus.items():
             self.assertNotEqual(sum(entry.values()), sum(density_no_focus[key].values()))
+
+class CentralityTests(TestCase):
+    """
+    Basic tests for the calculation of centralities on the weighted projected network.
+    """
+    def setUp(self):
+        self.A = AnnotatedHypergraph(DATA, ROLE_FIELDS)
+
+    def tearDown(self):
+        self.A = None
+
+    def test_degree_centrality(self):
+        """ Test the degree centrality calculation. """
+
+        degrees = degree_centrality(self.A)
+
+        self.assertEqual(degrees[96], 2237.0)
+
+    def test_eigenvector_centrality(self):
+        """ Test the eigenvector centrality calculation. """
+
+        eigenvector = eigenvector_centrality(self.A)
+
+        self.assertAlmostEqual(eigenvector[67], 0.14693461555354528)
+
+    def test_pagerank_centrality(self):
+        """ Test the eigenvector centrality calculation. """
+
+        pagerank = pagerank_centrality(self.A)
+
+        self.assertAlmostEqual(pagerank[8], 0.01516827830191012)

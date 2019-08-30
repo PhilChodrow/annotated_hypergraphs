@@ -1,4 +1,6 @@
 from unittest import TestCase
+import numpy as np
+
 from data_loader import DATA, ROLE_FIELDS
 
 from ahyper.annotated_hypergraph import AnnotatedHypergraph
@@ -59,3 +61,34 @@ class MCMCTests(TestCase):
         diff = sum([x.nid!=y.nid for x,y in zip(il_before, il_after)])
         
         self.assertGreater(diff, 0)
+
+class ConversionTests(TestCase):
+    """
+    Testing the conversion methods.
+    """
+
+    def setUp(self):
+        self.A = AnnotatedHypergraph(DATA, ROLE_FIELDS)
+
+    def tearDown(self):
+        self.A = None
+
+    def test_convert_to_weighted_edges(self):
+        """Test projection to a weighted directed graph."""
+
+        weighted_edges = self.A.to_weighted_projection()
+        
+        # One particular example
+        self.assertEqual(weighted_edges[0][6], 8.0)
+
+    def test_convert_to_weighted_edges_with_custom_R(self):
+        """
+        Test projection to a weighted directed graph, using a custom
+        role-interaction matrix, R.
+        """
+        R = 2*np.ones((len(ROLE_FIELDS), len(ROLE_FIELDS)))
+        self.A.assign_role_interaction_matrix(R)
+        weighted_edges = self.A.to_weighted_projection()
+        
+        # One particular example
+        self.assertEqual(weighted_edges[0][6], 16.0)
