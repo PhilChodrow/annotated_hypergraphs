@@ -25,17 +25,24 @@ class AnnotatedHypergraph(object):
         # Assign edge ids if not already present
         if records[0].get('eid') is None:
             for i in range(len(records)):
-                records[i]['eid'] = -(i+1)
+                records[i]['eid'] = i
         
         self.roles = roles
         self.IL = incidence_list_from_records(records, self.roles)
         self.IL.sort(key = lambda x: x.role) # sort by roles for now
+        
+#         self.relabel()
+        
+        self.set_states()
+
+    def set_states(self):
         self.node_list = np.unique([e.nid for e in self.IL])
         self.edge_list = np.unique([e.eid for e in self.IL])
         self.n = len(self.node_list)
         self.m = len(self.edge_list)
         self.R = None
         
+
     def get_node_list(self):
         """"""
         return self.node_list
@@ -44,9 +51,20 @@ class AnnotatedHypergraph(object):
         """"""
         return self.edge_list
     
-    def stub_labeled_MCMC(self, n_steps = 1):
-        """"""
+    def MCMC(self, n_steps = 1, avoid_degeneracy = True, **kwargs):
+        if avoid_degeneracy:
+            alg = self.degeneracy_avoiding_MCMC
+        else:
+            alg = self.stub_labeled_MCMC
         
+        alg(n_steps, **kwargs)
+    
+    def stub_labeled_MCMC(self, n_steps = 1):
+        """
+        Can create degeneracies, probably deprecated
+        """
+        
+        self.IL.sort(key = lambda x: x.role)
         by_role = [list(v) for role, v in groupby(self.IL, lambda x: x.role)]
         
         # distribute steps over the role partition, using coupon-collector heuristic
@@ -59,6 +77,60 @@ class AnnotatedHypergraph(object):
         
         self.IL = [e for role in by_role for e in role]
     
+    def degeneracy_avoiding_MCMC(self, n_steps = 1, verbose = True):
+        '''
+        Avoids creating edges in which the same node appears multiple times. 
+        Some properties need checking, but should be equivalent to stub-matching conditioned on nondegeneracy. 
+        '''
+        
+        # prepare: easier to work on a transformed data structure in which incidences are grouped into hyper edges
+        self.IL.sort(key = lambda e: (e.eid, e.role))
+        grouped = groupby(self.IL, lambda e: (e.eid))
+        edges = {k: list(v) for k, v in grouped}
+        
+        k_rejected = 0
+        N = 0
+        
+        while(N < n_steps):
+            
+            # select two random hyperedges
+            i, j = np.random.randint(0, self.m, 2)
+            E0, E1 = edges[i], edges[j] 
+            
+            # select a random node-edge incidence from each
+            k = np.random.randint(len(E0))
+            l = np.random.randint(len(E1))
+            
+            # if the two node-edge incidences have different roles, then try again
+            if E0[k].role != E1[l].role:
+                k_rejected += 1
+            
+            else:
+                # construct the proposal swap 
+
+                E0_prop = E0.copy()
+                E0_prop[k] = NodeEdgeIncidence(E1[l].nid, E0[k].role, E0[k].eid, E0[k].meta)
+
+                E1_prop = E1.copy()
+                E1_prop[l] = NodeEdgeIncidence(E0[k].nid, E1[l].role, E1[l].eid, E1[l].meta)
+                                       
+                # if either of the edges would become degenerate, reject the proposal
+                if (check_degenerate(E0_prop) or check_degenerate(E1_prop)):
+                    k_rejected += 1
+                # otherwise, accept the proposal
+                else:
+                    edges[i] = E0_prop                        
+                    edges[j] = E1_prop
+                    N += 1
+                        
+        # update self.IL
+        self.IL = [e for E in edges for e in edges[E]]
+        self.IL.sort(key = lambda x: x.role)
+            
+        if verbose: 
+            print(str(n_steps) + ' steps taken, ' + str(k_rejected) + ' steps rejected.')
+            
+    
     def get_IL(self):
         """"""
         return(sorted(self.IL, key = lambda x: x.eid, reverse = True))
@@ -69,7 +141,7 @@ class AnnotatedHypergraph(object):
     
     def node_degrees(self, by_role = False):
         """"""
-
+        self.IL.sort(key = lambda x: x.role)
         if by_role:
             br = {role: list(v) for role, v in groupby(self.IL, lambda x: x.role)}
             DT = {role : Counter([e.nid for e in br[role]]) for role in self.roles}
@@ -83,6 +155,7 @@ class AnnotatedHypergraph(object):
     def edge_dimensions(self, by_role = False):
         """"""
         
+        self.IL.sort(key = lambda x: x.role)
         if by_role:
             br =  {role: list(v) for role, v in groupby(self.IL, lambda x: x.role)}
             DT = {role : Counter([e.eid for e in br[role]]) for role in self.roles}
@@ -91,6 +164,7 @@ class AnnotatedHypergraph(object):
         else:
             E = [e.eid for e in self.IL]
             return(Counter(E))
+
 
     def assign_role_interaction_matrix(self, R=None):
         """
@@ -144,6 +218,81 @@ class AnnotatedHypergraph(object):
 
         return weighted_edges
 
+    
+    def count_degeneracies(self):
+        """Return the number of edges in which the same node appears multiple times"""
+        self.IL.sort(key = lambda x: x.eid)
+        by_edges = [list(v) for eid, v in groupby(self.IL, lambda x: x.eid)]
+        
+        return(sum([check_degenerate(E) for E in by_edges]))
+        
+    
+    def remove_degeneracies(self, precedence):
+        '''
+        Removes entries from self.IL in order of precedence until each node appears only once in each edge.
+        Roles with higher precedence are retained.  
+        Precedence: a dict of the form {role : p}, lower p -> higher precedence
+        May be overaggressive in  node removal -- further tests necessary 
+        '''
+        self.IL.sort(key = lambda x: (x.eid, x.nid, precedence[x.role]))
+        grouped = [list(v) for eid, v in groupby(self.IL, lambda x: x.eid)]
+        
+        IL_ = []
+
+        for E in grouped:
+            E_ = []
+            for e in E:
+                if e.nid not in [e.nid for e in E_]:
+                    E_.append(e)
+            IL_.append(E_)
+        
+        IL_ = [e for E in IL_ for e in E]
+            
+        n_removed = len(self.IL) - len(IL_)
+        print('Removed ' + str(n_removed) + ' node-edge incidences')
+        self.IL = IL_
+        self.IL.sort(key = lambda x: x.role)
+        self.relabel()
+
+    def remove_singletons(self):
+        '''
+        Removes entries from self.IL if the corresponding edge contains only one node. 
+        '''
+        D = self.edge_dimensions()
+        to_remove = []
+        for e in self.IL:
+            if D[e.eid] == 1:
+                to_remove.append(e)
+        k_removed = len(to_remove)
+        for e in to_remove:
+            self.IL.remove(e)
+        self.relabel()
+        self.set_states()
+        print('Removed '  + str(k_removed) + ' singletons.')
+        
+    def relabel(self):
+        D = IL_to_dict(self.IL)
+        
+        def relabel_by_field(D, field):
+            
+            D.sort(key = lambda x: x[field])
+            j   = 0
+            old = 0
+            for e in D:    
+                if e[field] != old: 
+                    old = e[field]
+                    j += 1
+                e[field] = j
+            return(D)
+        
+        D = relabel_by_field(D, 'eid')
+        D = relabel_by_field(D, 'nid')
+                
+        self.IL = dict_to_IL(D)
+        self.set_states()
+        
+        
+
 def bipartite_edge_swap(e0, e1):
     """
     Creates two new swapped edges by permuting the node ids.
@@ -168,3 +317,15 @@ def swap_step(il):
     while il[i].eid == il[j].eid: 
         i,j = np.random.randint(0, n, 2)        
     il[i], il[j] = bipartite_edge_swap(il[i], il[j])
+
+    
+def check_degenerate(E):
+    '''E is a set of node-edge incidences corresponding to a single edge'''
+    E_distinct = set([e.nid for e in E])
+    return(len(E_distinct) != len(E))
+
+
+
+
+    
+    

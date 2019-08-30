@@ -54,3 +54,10 @@ def normalise_counters(counters):
         total = sum(d.values())
         for key in d:
             d[key] /= total
+
+def IL_to_dict(IL):
+    fields = ['nid', 'role', 'eid', 'meta']
+    return([{field: (getattr(IL[i],field)) for field in fields } for i in range(len(IL))])
+
+def dict_to_IL(D):
+    return([NodeEdgeIncidence(**e) for e in D])
