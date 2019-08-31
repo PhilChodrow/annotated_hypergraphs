@@ -3,7 +3,23 @@ import json
 from itertools import groupby
 from collections import namedtuple
 
-NodeEdgeIncidence = namedtuple('NodeEdgeIncidence',  ['nid', 'role', 'eid','meta'])
+# NodeEdgeIncidence = namedtuple('NodeEdgeIncidence',  ['nid', 'role', 'eid','meta'])
+
+class NodeEdgeIncidence(object):
+
+    __slots__ = ('nid', 'role', 'eid', 'meta')
+
+    def __init__(self, nid, role, eid, meta):
+
+        self.nid = nid
+        self.role = role
+        self.eid = eid
+        self.meta = meta
+
+    def __repr__(self):
+        return "NodeEdgeIncidence({})".format(
+                        ', '.join(["{}={}".format(key, getattr(self,key)) for key in self.__class__.__slots__])
+                        )    
 
 def incidence_list_from_records(data, role_fields):
     """
