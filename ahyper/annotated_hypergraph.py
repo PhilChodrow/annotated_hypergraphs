@@ -1,5 +1,8 @@
 from .utils import *
 from collections import Counter
+from copy import deepcopy
+from random import shuffle
+
 
 class AnnotatedHypergraph(object):
     
@@ -233,6 +236,32 @@ class AnnotatedHypergraph(object):
         self.IL = dict_to_IL(D)
         self.set_states()
         
+        
+    def stub_matching(self):
+        '''
+        Return a randomized version of self constructed according to the naive stub-matching algorithm. 
+        Preserves node-role and edge-role matrices, but generally introduces degeneracies. 
+        '''
+        
+        dims = self.edge_dimensions(by_role = True)
+        
+        stubs = [(e.nid, e.role) for e in self.IL]
+        shuffle(stubs)
+        stubs.sort(key = lambda e: e[1])
+        stubs = {r: list(s) for r, s in groupby(stubs, key = lambda e: e[1])}
+        
+        a = deepcopy(self)
+        IL_ = []
+        
+        for e in dims: 
+            for r in self.roles: 
+                for i in range(dims[e][r]):
+                    to_add = stubs[r].pop(0)
+                    e_ = NodeEdgeIncidence(nid = to_add[0], role = to_add[1], eid = e, meta = None)
+                    IL_.append(e_)
+        a.IL = IL_
+        a.set_states()
+        return(a)
         
 def bipartite_edge_swap(e0, e1):
     """
