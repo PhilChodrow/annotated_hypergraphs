@@ -278,8 +278,7 @@ class AnnotatedHypergraph(object):
         print('Removed '  + str(k_removed) + ' singletons.')
         
     def relabel(self):
-        D = IL_to_dict(self.IL)
-        
+
         def relabel_by_field(D, field):
             
             D.sort(key = lambda x: x[field])
@@ -292,10 +291,9 @@ class AnnotatedHypergraph(object):
                 e[field] = j
             return(D)
         
-        D = relabel_by_field(D, 'eid')
-        D = relabel_by_field(D, 'nid')
-                
-        self.IL = dict_to_IL(D)
+        D = relabel_by_field(self.IL, 'eid')
+        D = relabel_by_field(self.IL, 'nid')
+
         self.set_states()
         
         

@@ -19,7 +19,13 @@ class NodeEdgeIncidence(object):
     def __repr__(self):
         return "NodeEdgeIncidence({})".format(
                         ', '.join(["{}={}".format(key, getattr(self,key)) for key in self.__class__.__slots__])
-                        )    
+                        )
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+    
+    def __setitem__(self, key, value):
+        return setattr(self, key, value)        
 
 def incidence_list_from_records(data, role_fields):
     """
@@ -70,10 +76,3 @@ def normalise_counters(counters):
         total = sum(d.values())
         for key in d:
             d[key] /= total
-
-def IL_to_dict(IL):
-    fields = ['nid', 'role', 'eid', 'meta']
-    return([{field: (getattr(IL[i],field)) for field in fields } for i in range(len(IL))])
-
-def dict_to_IL(D):
-    return([NodeEdgeIncidence(**e) for e in D])
