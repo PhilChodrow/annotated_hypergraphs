@@ -3,16 +3,25 @@ from .utils import *
 
 from collections import Counter, defaultdict
 from itertools import permutations
-
-from collections import Counter
 from copy import deepcopy
 from random import shuffle
 
-
+import pandas as pd
 
 class AnnotatedHypergraph(object):
     
-    def __init__(self, records, roles):
+    def __init__(self, IL, roles):
+        """
+
+        """
+        self.IL = IL
+        self.roles = roles
+
+        self.IL.sort(key = lambda x: x.role)
+        self.set_states()
+
+    @classmethod
+    def from_records(cls, records, roles):
         """
         Construct an annotated hypergraph from records.
 
@@ -33,14 +42,30 @@ class AnnotatedHypergraph(object):
         if records[0].get('eid') is None:
             for i in range(len(records)):
                 records[i]['eid'] = i
+
+        IL = incidence_list_from_records(records, roles)
+
+        return cls(IL, roles)
+
+    @classmethod
+    def from_incidence(cls, dataset, root='./data/', relabel_roles=False, add_metadata=False):
+        """
+        """
+        incidence = pd.read_csv(root+dataset+'/incidence.csv')
+        edges = pd.read_csv(root+dataset+'/edges.csv', index_col=0)
+        roles = pd.read_csv(root+dataset+'/roles.csv', index_col=0, header=None, squeeze=True)
+        incidence.columns = ['nid', 'eid', 'role']
+
+        if relabel_roles:
+            incidence['role'] = incidence.role.apply(lambda x: roles[x])
         
-        self.roles = roles
-        self.IL = incidence_list_from_records(records, self.roles)
-        self.IL.sort(key = lambda x: x.role) # sort by roles for now
-        
-#         self.relabel()
-        
-        self.set_states()
+        if add_metadata:
+            metamapper = {ix:d for ix, d in zip(edges.index, edges.to_dict(orient='records'))}
+            incidence['meta'] = incidence.eid.apply(lambda x: metamapper[x])
+        else:
+            incidence['meta'] = None
+
+        return cls([NodeEdgeIncidence(**row) for ix,row in incidence.iterrows()], list(roles.values))   
 
     def set_states(self):
         self.node_list = np.unique([e.nid for e in self.IL])
