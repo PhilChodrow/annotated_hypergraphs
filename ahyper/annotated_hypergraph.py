@@ -53,19 +53,22 @@ class AnnotatedHypergraph(object):
         """
         incidence = pd.read_csv(root+dataset+'/incidence.csv')
         edges = pd.read_csv(root+dataset+'/edges.csv', index_col=0)
-        roles = pd.read_csv(root+dataset+'/roles.csv', index_col=0, header=None, squeeze=True)
         incidence.columns = ['nid', 'eid', 'role']
+        roles = pd.read_csv(root+dataset+'/roles.csv', index_col=0, header=None, squeeze=True)
 
         if relabel_roles:
             incidence['role'] = incidence.role.apply(lambda x: roles[x])
-        
+            roles = list(roles.values)
+        else:
+            roles = list(range(len(roles)))
+
         if add_metadata:
             metamapper = {ix:d for ix, d in zip(edges.index, edges.to_dict(orient='records'))}
             incidence['meta'] = incidence.eid.apply(lambda x: metamapper[x])
         else:
             incidence['meta'] = None
 
-        return cls([NodeEdgeIncidence(**row) for ix,row in incidence.iterrows()], list(roles.values))   
+        return cls([NodeEdgeIncidence(**row) for ix,row in incidence.iterrows()], roles)   
 
     def set_states(self):
         self.node_list = np.unique([e.nid for e in self.IL])
