@@ -44,6 +44,9 @@ def local_role_density(annotated_hypergraph, include_focus=False, absolute_value
         normalise_counters(densities)
         return densities
 
+def _degree_centrality(weighted_projection):
+    return {key:sum(targets.values()) for key,targets in weighted_projection.items()}
+
 def degree_centrality(annotated_hypergraph):
     """
     Returns the weighted degree centrality for each node in an annotated hypergraph
@@ -59,9 +62,12 @@ def degree_centrality(annotated_hypergraph):
         degrees (dict): A dictionary of {node:degree} pairs.
     """
 
-    weighted_edges = annotated_hypergraph.to_weighted_projection()
+    weighted_projection = annotated_hypergraph.to_weighted_projection()
+    return _degree_centrality(weighted_projection)
 
-    return {key:sum(targets.values()) for key,targets in weighted_edges.items()}
+
+def _eigenvector_centrality(weighted_projection, **kwargs):
+    return nx.eigenvector_centrality(weighted_projection, **kwargs)
 
 def eigenvector_centrality(annotated_hypergraph, **kwargs):
     """
@@ -81,13 +87,13 @@ def eigenvector_centrality(annotated_hypergraph, **kwargs):
     Output:
         eigenvector (dict): A dictionary of {node:eigenvector_centrality} pairs.
     """
-    weighted_edges = annotated_hypergraph.to_weighted_projection()
+    weighted_projection = annotated_hypergraph.to_weighted_projection(use_networkx=True)
     
-    # Conversion to 
-    weighted_edges = {source:{target:{'weight':val} for target,val in values.items()} for source, values in weighted_edges.items()}
-    G = nx.DiGraph(weighted_edges)
+    return _eigenvector_centrality(weighted_projection)
+    
 
-    return nx.eigenvector_centrality(G, **kwargs)
+def _pagerank_centrality(weighted_projection, **kwargs):
+    return nx.pagerank(weighted_projection, **kwargs)
 
 def pagerank_centrality(annotated_hypergraph, **kwargs):
     """
@@ -107,13 +113,13 @@ def pagerank_centrality(annotated_hypergraph, **kwargs):
     Output:
         pagerank (dict): A dictionary of {node:pagerank_centrality} pairs.
     """
-    weighted_edges = annotated_hypergraph.to_weighted_projection()
-    
-    # Conversion to 
-    weighted_edges = {source:{target:{'weight':val} for target,val in values.items()} for source, values in weighted_edges.items()}
-    G = nx.DiGraph(weighted_edges)
+    weighted_projection = annotated_hypergraph.to_weighted_projection(use_networkx=True)
 
-    return nx.pagerank(G, **kwargs)
+    return _pagerank_centrality(weighted_projection, **kwargs)
+
+
+def _connected_components(weighted_projection):
+    nx.number_weakly_connected_components(weighted_projection)
 
 def connected_components(annotated_hypergraph):
     """
@@ -128,13 +134,9 @@ def connected_components(annotated_hypergraph):
     Output:
         connected_components (int): The number of connected components.
     """
-    weighted_edges = annotated_hypergraph.to_weighted_projection()
-    
-    # Conversion to 
-    weighted_edges = {source:{target:{'weight':val} for target,val in values.items()} for source, values in weighted_edges.items()}
-    G = nx.DiGraph(weighted_edges)
+    weighted_projection = annotated_hypergraph.to_weighted_projection(use_networkx=True)
 
-    return nx.number_weakly_connected_components(G)
+    return _connected_components(weighted_projection)
 
 def modularity(annotated_hypergraph, return_communities=False):
     """
