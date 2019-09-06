@@ -72,7 +72,10 @@ def records_from_incidence_list(IL, role_fields):
 
 def normalise_counters(counters):
     """Normalise a dictionary of counters inplace."""
-    for d in counters.values():
+    for node, d in counters.items():
         total = sum(d.values())
-        for key in d:
-            d[key] /= total
+        if total == 0.0:
+            counters[node] = None
+        else:
+            for key in d:
+                d[key] /= total
