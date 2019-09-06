@@ -30,8 +30,10 @@ def shuffled_ensemble_features(annotated_hypergraph,
     """
     
     A = annotated_hypergraph
-    W = A.to_weighted_projection(use_networkx=True)
     num_stubs = len(A.IL)
+    
+    # Check if we need to calculate the weighted projection.
+    uses_projection = sum([f['acts_on']=='weighted_projection' for f in features.values()]) > 0
     
     feature_store = defaultdict(dict)
     
@@ -40,12 +42,15 @@ def shuffled_ensemble_features(annotated_hypergraph,
     
     for ix in range(num_shuffles):
         
+        # Logging
         if verbose and (ix % (num_shuffles//10)) == 0: print(str(ix)+'%', end='\r', flush=True)
                     
         A.stub_labeled_MCMC(n_steps=int(shuffle_fraction*num_stubs))
         
+        if uses_projection:
+            W = A.to_weighted_projection(use_networkx=True)
+        
         for feature,f in features.items():
-            
             if f['acts_on'] == 'annotated_hypergraph':
                 feature_store[ix][feature] = f['func'](A, **f['kwargs'])
             elif f['acts_on'] == 'weighted_projection':
