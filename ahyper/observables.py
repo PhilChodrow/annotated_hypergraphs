@@ -44,6 +44,35 @@ def local_role_density(annotated_hypergraph, include_focus=False, absolute_value
         normalise_counters(densities)
         return densities
 
+def node_role_participation(annotated_hypergraph, absolute_values=False):
+    """
+    Calculates the proportion of instances where each node is in each role.
+
+    Input:
+        annotated_hypergraph [AnnotatedHypergraph]: An annotated hypergraph.
+        absolute_values [Bool]: If True, returns role counts rather than densities.
+    Returns:
+        role_densities []: An array of dimension (# nodes x # roles) 
+                           describing the participation of each role.
+    """
+    A = annotated_hypergraph
+
+    def get_counts(group):
+        return Counter([x.role for x in group])
+
+    densities = {nid:get_counts(v) for nid, v in groupby(sorted(A.IL, key=lambda x: x.nid), lambda x: x.nid)}
+
+    keys = set(chain.from_iterable(densities.values()))
+    for item in densities.values():
+        item.update({key:0 for key in keys if key not in item})
+
+    if absolute_values:
+        return densities
+    
+    else:
+        normalise_counters(densities)
+        return densities
+
 def _degree_centrality(weighted_projection):
     return {key:sum(targets.values()) for key,targets in weighted_projection.items()}
 
