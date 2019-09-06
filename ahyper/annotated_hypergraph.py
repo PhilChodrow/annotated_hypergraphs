@@ -7,6 +7,7 @@ from copy import deepcopy
 from random import shuffle
 
 import pandas as pd
+import networkx as nx
 
 class AnnotatedHypergraph(object):
     
@@ -223,7 +224,7 @@ class AnnotatedHypergraph(object):
         else:
             self.R = np.ones(shape=(num_roles,num_roles))
 
-    def to_weighted_projection(self):
+    def to_weighted_projection(self, use_networkx=False):
         """
         Projects an annotated hypergraph to a weighted, directed graph.
 
@@ -232,7 +233,7 @@ class AnnotatedHypergraph(object):
         weight of one.
 
         Input:
-            None
+            use_networkx (bool): If True, returns a networkx DiGraph object.
         
         Output:
             weighted_edges (dict): A dictionary containing all source nodes as keys.
@@ -250,6 +251,11 @@ class AnnotatedHypergraph(object):
             edge = list(edge)
             for a,b in permutations(edge, 2):
                 weighted_edges[a.nid][b.nid] += self.R[role_map[a.role], role_map[b.role]]
+
+        if use_networkx:
+            weighted_edges = {source:{target:{'weight':val} for target,val in values.items()} for source, values in weighted_edges.items()}
+            G = nx.DiGraph(weighted_edges)
+            return G
 
         return weighted_edges
 
