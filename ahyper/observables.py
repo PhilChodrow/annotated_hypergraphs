@@ -137,19 +137,3 @@ def connected_components(annotated_hypergraph):
     weighted_projection = annotated_hypergraph.to_weighted_projection(use_networkx=True)
 
     return _connected_components(weighted_projection)
-
-def modularity(annotated_hypergraph, return_communities=False):
-    """
-    Returns the optimal modularity score for an annotated hypergraph
-    with a defined role-interaction matrix.
-
-    Note: For stylistic purposes we recreate the weighted adjacency graph for each centrality. 
-          This can easily be factored out.
-
-    Input:
-        annotated_hypergraph [AnnotatedHypergraph]: An annotated hypergraph.
-    
-    Output:
-        degrees:
-    """
-    raise NotImplementedError
