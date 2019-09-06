@@ -63,7 +63,7 @@ def degree_centrality(annotated_hypergraph):
 
     return {key:sum(targets.values()) for key,targets in weighted_edges.items()}
 
-def eigenvector_centrality(annotated_hypergraph):
+def eigenvector_centrality(annotated_hypergraph, **kwargs):
     """
     Returns the weighted eigenvector centrality for each node in an annotated hypergraph
     with a defined role-interaction matrix.
@@ -87,9 +87,9 @@ def eigenvector_centrality(annotated_hypergraph):
     weighted_edges = {source:{target:{'weight':val} for target,val in values.items()} for source, values in weighted_edges.items()}
     G = nx.DiGraph(weighted_edges)
 
-    return nx.eigenvector_centrality(G)
+    return nx.eigenvector_centrality(G, **kwargs)
 
-def pagerank_centrality(annotated_hypergraph):
+def pagerank_centrality(annotated_hypergraph, **kwargs):
     """
     Returns the weighted PageRank centrality for each node in an annotated hypergraph
     with a defined role-interaction matrix.
@@ -113,7 +113,28 @@ def pagerank_centrality(annotated_hypergraph):
     weighted_edges = {source:{target:{'weight':val} for target,val in values.items()} for source, values in weighted_edges.items()}
     G = nx.DiGraph(weighted_edges)
 
-    return nx.pagerank(G)
+    return nx.pagerank(G, **kwargs)
+
+def connected_components(annotated_hypergraph):
+    """
+    Returns the number of connected components of an annotated hypergraph.
+
+    Note: For stylistic purposes we recreate the weighted adjacency graph for each centrality. 
+          This can easily be factored out.
+
+    Input:
+        annotated_hypergraph [AnnotatedHypergraph]: An annotated hypergraph.
+    
+    Output:
+        connected_components (int): The number of connected components.
+    """
+    weighted_edges = annotated_hypergraph.to_weighted_projection()
+    
+    # Conversion to 
+    weighted_edges = {source:{target:{'weight':val} for target,val in values.items()} for source, values in weighted_edges.items()}
+    G = nx.DiGraph(weighted_edges)
+
+    return nx.number_weakly_connected_components(G)
 
 def modularity(annotated_hypergraph, return_communities=False):
     """
