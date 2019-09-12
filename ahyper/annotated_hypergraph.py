@@ -113,7 +113,7 @@ class AnnotatedHypergraph(object):
         
         self.IL = [e for role in by_role for e in role]
     
-    def degeneracy_avoiding_MCMC(self, n_steps = 1, verbose = True):
+    def degeneracy_avoiding_MCMC(self, n_steps=1, verbose=False):
         '''
         Avoids creating edges in which the same node appears multiple times. 
         Some properties need checking, but should be equivalent to stub-matching conditioned on nondegeneracy. 
