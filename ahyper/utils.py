@@ -79,3 +79,42 @@ def normalise_counters(counters):
         else:
             for key in d:
                 d[key] /= total
+
+def entropy(iterable):
+    """ Calculates the entropy of an iterable. """
+    if iterable[0] is None:
+        return None
+    return -sum([p*np.log2(p) for p in iterable if p>0])
+
+def average_entropy(func):
+    """
+    Takes a function that returns one or more probability distributions and returns an average entropy.
+    """    
+    def avg_entropy(args, **kwargs):
+        density = pd.DataFrame(func(args, **kwargs)).T
+        return density.apply(entropy, axis=1).mean()
+    return avg_entropy
+
+def average_value(func):
+    """
+    Converts function output to a Pandas series and takes the mean.
+    """
+    def avg_value(args, **kwargs):
+        return pd.Series(func(args, **kwargs)).mean()
+    return avg_value
+
+def variance_value(func):
+    """
+    Converts function output to a Pandas series and takes the variance.
+    """
+    def var_value(args, **kwargs):
+        return pd.Series(func(args, **kwargs)).var()
+    return var_value
+
+def entropy_value(func):
+    """
+    Converts function output to a Pandas series and calculates the entropy.
+    """
+    def ent_value(args, **kwargs):
+        return entropy(pd.Series(func(args, **kwargs)))
+    return ent_value
