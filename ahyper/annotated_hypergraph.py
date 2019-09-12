@@ -8,6 +8,8 @@ from collections import Counter
 from copy import deepcopy
 from random import shuffle
 
+import networkx as nx
+import numpy as np
 
 
 class AnnotatedHypergraph(object):
@@ -324,6 +326,19 @@ class AnnotatedHypergraph(object):
         a.IL = IL_
         a.set_states()
         return(a)
+    
+    def bipartite_graph(self):
+        '''
+        return an nx.Graph() in which both nodes and edges occur as nodes, and are linked according to incidence. 
+        '''
+        ebunch = [(e.nid, -e.eid, {'role' : e.role}) for e in self.get_IL()]
+        G = nx.Graph()
+        G.add_edges_from(ebunch)
+        return(G)
+    
+    
+
+        
         
 
 def bipartite_edge_swap(e0, e1):
@@ -356,6 +371,8 @@ def check_degenerate(E):
     '''E is a set of node-edge incidences corresponding to a single edge'''
     E_distinct = set([e.nid for e in E])
     return(len(E_distinct) != len(E))
+
+
 
 
 
