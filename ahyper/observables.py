@@ -74,7 +74,7 @@ def node_role_participation(annotated_hypergraph, absolute_values=False):
         return densities
 
 def _degree_centrality(weighted_projection):
-    return {key:sum(targets.values()) for key,targets in weighted_projection.items()}
+    return nx.out_degree_centrality(weighted_projection)
 
 def degree_centrality(annotated_hypergraph):
     """
@@ -91,7 +91,7 @@ def degree_centrality(annotated_hypergraph):
         degrees (dict): A dictionary of {node:degree} pairs.
     """
 
-    weighted_projection = annotated_hypergraph.to_weighted_projection()
+    weighted_projection = annotated_hypergraph.to_weighted_projection(use_networkx=True)
     return _degree_centrality(weighted_projection)
 
 
