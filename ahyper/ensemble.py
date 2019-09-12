@@ -173,7 +173,7 @@ def save_feature_study(annotated_hypergraph,
                                         num_shuffles,
                                         features,
                                         burn_fraction=None,
-                                        shuffle_algorithm='degeneracy_avoiding_MCMC',  
+                                        shuffle_algorithm='_degeneracy_avoiding_MCMC_no_role',  
                                         verbose=False)
 
         role_destroying_ensemble = pd.DataFrame(role_destroying_ensemble).T

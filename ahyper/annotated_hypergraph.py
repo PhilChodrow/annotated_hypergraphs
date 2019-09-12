@@ -116,7 +116,7 @@ class AnnotatedHypergraph(object):
         self.IL = [e for role in by_role for e in role]
     
 
-    def degeneracy_avoiding_MCMC(self, n_steps = 1, verbose = True, role_labels = True):
+    def degeneracy_avoiding_MCMC(self, n_steps = 1, verbose = False, role_labels = True):
         '''
         Avoids creating edges in which the same node appears multiple times. 
         Some properties need checking, but should be equivalent to stub-matching conditioned on nondegeneracy. 
@@ -169,8 +169,11 @@ class AnnotatedHypergraph(object):
             
         if verbose: 
             print(str(n_steps) + ' steps taken, ' + str(k_rejected) + ' steps rejected.')
-            
-    
+
+    def _degeneracy_avoiding_MCMC_no_role(self, n_steps=1, verbose=False):
+        """ Helper function for systematic methods. """        
+        return self.degeneracy_avoiding_MCMC(n_steps=n_steps, verbose=verbose)
+
     def get_IL(self):
         """"""
         return(sorted(self.IL, key = lambda x: x.eid, reverse = True))
