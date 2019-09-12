@@ -84,7 +84,7 @@ class AnnotatedHypergraph(object):
         
         self.IL = [e for role in by_role for e in role]
     
-    def degeneracy_avoiding_MCMC(self, n_steps = 1, verbose = True):
+    def degeneracy_avoiding_MCMC(self, n_steps = 1, verbose = True, role_labels = True):
         '''
         Avoids creating edges in which the same node appears multiple times. 
         Some properties need checking, but should be equivalent to stub-matching conditioned on nondegeneracy. 
@@ -109,8 +109,9 @@ class AnnotatedHypergraph(object):
             l = np.random.randint(len(E1))
             
             # if the two node-edge incidences have different roles, then try again
-            if E0[k].role != E1[l].role:
-                k_rejected += 1
+            if role_labels: 
+	            if E0[k].role != E1[l].role:
+	                k_rejected += 1
             
             else:
                 # construct the proposal swap 
@@ -297,7 +298,6 @@ class AnnotatedHypergraph(object):
                 
         self.IL = dict_to_IL(D)
         self.set_states()
-        
         
     def stub_matching(self):
         '''
