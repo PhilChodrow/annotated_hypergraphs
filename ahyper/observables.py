@@ -148,7 +148,7 @@ def pagerank_centrality(annotated_hypergraph, **kwargs):
 
 
 def _connected_components(weighted_projection):
-    nx.number_weakly_connected_components(weighted_projection)
+    return nx.number_weakly_connected_components(weighted_projection)
 
 def connected_components(annotated_hypergraph):
     """
