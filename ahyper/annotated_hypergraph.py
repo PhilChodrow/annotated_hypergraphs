@@ -161,7 +161,8 @@ class AnnotatedHypergraph(object):
                 else:
                     edges[i] = E0_prop                        
                     edges[j] = E1_prop
-                    N += 1
+            
+            N += 1
                         
         # update self.IL
         self.IL = [e for E in edges for e in edges[E]]
