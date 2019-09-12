@@ -5,6 +5,19 @@ def data_features(annotated_hypergraph,
                   features):
     """
     Calculate features for a single dataset.
+
+    Input:
+        annotated_hypergraph (AnnotatedHypergraph):
+        features (dict): The feature specification (see below)
+
+    Output:
+        feature_store (dict): All features.
+
+    >>> features = {'feature1':{'func':function_for_feature1,
+    >>>                         'acts_on':'annotated_hypergraph',
+    >>>                         'kwargs':{'kw1':val1}
+    >>>                        }
+    >>>            }    
     """
     A = annotated_hypergraph
     
@@ -99,7 +112,30 @@ def save_feature_study(annotated_hypergraph,
                        role_destroying=True
                        ):
     """
+    Calculate distribution of features for an ensemble of shuffled graphs.
+    
+    Input:
+        annotated_hypergraph (AnnotatedHypergraph):
+        data_name (str): The name of the dataset under study (used as directory).
+        shuffle_fraction (float): The fraction of all stubs to be shuffled each iteration
+        num_shuffles (int): The number of iterations
+        features (dict): The feature specification (see below)
+        burn_fraction (float): The fraction of stubs to be shuffled before data collection
+        role_preserving (bool): If True, calculates role preserving ensemble (default True).
+        role_destroying (bool): If True, calculates role destroying ensemble (default True).
+
+    Output:
+        None : Files are saved to disk. 
+
+    Features should be specified as:
+
+    >>> features = {'feature1':{'func':function_for_feature1,
+    >>>                         'acts_on':'annotated_hypergraph',
+    >>>                         'kwargs':{'kw1':val1}
+    >>>                        }
+    >>>            }
     """
+
     A = annotated_hypergraph
     
     # Make directory if doesn't exist.
