@@ -14,7 +14,7 @@ class ConstructionTests(TestCase):
         """
         """
     
-        A = AnnotatedHypergraph(DATA, ROLE_FIELDS)
+        A = AnnotatedHypergraph.from_records(DATA, ROLE_FIELDS)
 
 class MCMCTests(TestCase):
     """
@@ -22,7 +22,7 @@ class MCMCTests(TestCase):
     """
 
     def setUp(self):
-        self.A = AnnotatedHypergraph(DATA, ROLE_FIELDS)
+        self.A = AnnotatedHypergraph.from_records(DATA, ROLE_FIELDS)
 
     def tearDown(self):
         self.A = None
@@ -68,7 +68,7 @@ class ConversionTests(TestCase):
     """
 
     def setUp(self):
-        self.A = AnnotatedHypergraph(DATA, ROLE_FIELDS)
+        self.A = AnnotatedHypergraph.from_records(DATA, ROLE_FIELDS)
 
     def tearDown(self):
         self.A = None

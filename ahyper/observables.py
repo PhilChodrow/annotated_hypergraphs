@@ -46,6 +46,38 @@ def local_role_density(annotated_hypergraph, include_focus=False, absolute_value
         normalise_counters(densities)
         return densities
 
+def node_role_participation(annotated_hypergraph, absolute_values=False):
+    """
+    Calculates the proportion of instances where each node is in each role.
+
+    Input:
+        annotated_hypergraph [AnnotatedHypergraph]: An annotated hypergraph.
+        absolute_values [Bool]: If True, returns role counts rather than densities.
+    Returns:
+        role_densities []: An array of dimension (# nodes x # roles) 
+                           describing the participation of each role.
+    """
+    A = annotated_hypergraph
+
+    def get_counts(group):
+        return Counter([x.role for x in group])
+
+    densities = {nid:get_counts(v) for nid, v in groupby(sorted(A.IL, key=lambda x: x.nid), lambda x: x.nid)}
+
+    keys = set(chain.from_iterable(densities.values()))
+    for item in densities.values():
+        item.update({key:0 for key in keys if key not in item})
+
+    if absolute_values:
+        return densities
+    
+    else:
+        normalise_counters(densities)
+        return densities
+
+def _degree_centrality(weighted_projection):
+    return nx.out_degree_centrality(weighted_projection)
+
 def degree_centrality(annotated_hypergraph):
     """
     Returns the weighted degree centrality for each node in an annotated hypergraph
@@ -61,11 +93,14 @@ def degree_centrality(annotated_hypergraph):
         degrees (dict): A dictionary of {node:degree} pairs.
     """
 
-    weighted_edges = annotated_hypergraph.to_weighted_projection()
+    weighted_projection = annotated_hypergraph.to_weighted_projection(use_networkx=True)
+    return _degree_centrality(weighted_projection)
 
-    return {key:sum(targets.values()) for key,targets in weighted_edges.items()}
 
-def eigenvector_centrality(annotated_hypergraph):
+def _eigenvector_centrality(weighted_projection, **kwargs):
+    return nx.eigenvector_centrality(weighted_projection, **kwargs)
+
+def eigenvector_centrality(annotated_hypergraph, **kwargs):
     """
     Returns the weighted eigenvector centrality for each node in an annotated hypergraph
     with a defined role-interaction matrix.
@@ -83,15 +118,15 @@ def eigenvector_centrality(annotated_hypergraph):
     Output:
         eigenvector (dict): A dictionary of {node:eigenvector_centrality} pairs.
     """
-    weighted_edges = annotated_hypergraph.to_weighted_projection()
+    weighted_projection = annotated_hypergraph.to_weighted_projection(use_networkx=True)
     
-    # Conversion to 
-    weighted_edges = {source:{target:{'weight':val} for target,val in values.items()} for source, values in weighted_edges.items()}
-    G = nx.DiGraph(weighted_edges)
+    return _eigenvector_centrality(weighted_projection)
+    
 
-    return nx.eigenvector_centrality(G)
+def _pagerank_centrality(weighted_projection, **kwargs):
+    return nx.pagerank(weighted_projection, **kwargs)
 
-def pagerank_centrality(annotated_hypergraph):
+def pagerank_centrality(annotated_hypergraph, **kwargs):
     """
     Returns the weighted PageRank centrality for each node in an annotated hypergraph
     with a defined role-interaction matrix.
@@ -109,18 +144,17 @@ def pagerank_centrality(annotated_hypergraph):
     Output:
         pagerank (dict): A dictionary of {node:pagerank_centrality} pairs.
     """
-    weighted_edges = annotated_hypergraph.to_weighted_projection()
-    
-    # Conversion to 
-    weighted_edges = {source:{target:{'weight':val} for target,val in values.items()} for source, values in weighted_edges.items()}
-    G = nx.DiGraph(weighted_edges)
+    weighted_projection = annotated_hypergraph.to_weighted_projection(use_networkx=True)
 
-    return nx.pagerank(G)
+    return _pagerank_centrality(weighted_projection, **kwargs)
 
-def modularity(annotated_hypergraph, return_communities=False):
+
+def _connected_components(weighted_projection):
+    return nx.number_weakly_connected_components(weighted_projection)
+
+def connected_components(annotated_hypergraph):
     """
-    Returns the optimal modularity score for an annotated hypergraph
-    with a defined role-interaction matrix.
+    Returns the number of connected components of an annotated hypergraph.
 
     Note: For stylistic purposes we recreate the weighted adjacency graph for each centrality. 
           This can easily be factored out.
@@ -129,9 +163,13 @@ def modularity(annotated_hypergraph, return_communities=False):
         annotated_hypergraph [AnnotatedHypergraph]: An annotated hypergraph.
     
     Output:
-        degrees:
+        connected_components (int): The number of connected components.
     """
+
     raise NotImplementedError
+    weighted_projection = annotated_hypergraph.to_weighted_projection(use_networkx=True)
+
+    return _connected_components(weighted_projection)
     
 def random_walk(G, n_steps, alpha = 0, nonbacktracking = False, alpha_ve = None, alpha_ev = None):
     '''
@@ -167,3 +205,6 @@ def random_walk(G, n_steps, alpha = 0, nonbacktracking = False, alpha_ve = None,
             V[i] = v
     
     return(V)
+
+    
+

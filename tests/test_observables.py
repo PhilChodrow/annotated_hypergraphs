@@ -11,7 +11,7 @@ class DensityTests(TestCase):
     """
 
     def setUp(self):
-        self.A = AnnotatedHypergraph(DATA, ROLE_FIELDS)
+        self.A = AnnotatedHypergraph.from_records(DATA, ROLE_FIELDS)
 
     def tearDown(self):
         self.A = None
@@ -47,7 +47,7 @@ class CentralityTests(TestCase):
     Basic tests for the calculation of centralities on the weighted projected network.
     """
     def setUp(self):
-        self.A = AnnotatedHypergraph(DATA, ROLE_FIELDS)
+        self.A = AnnotatedHypergraph.from_records(DATA, ROLE_FIELDS)
 
     def tearDown(self):
         self.A = None

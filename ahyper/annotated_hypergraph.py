@@ -3,18 +3,28 @@ from .utils import *
 
 from collections import Counter, defaultdict
 from itertools import permutations
-
-from collections import Counter
 from copy import deepcopy
 from random import shuffle
 
-import networkx as nx
 import numpy as np
+import pandas as pd
+import networkx as nx
 
 
 class AnnotatedHypergraph(object):
     
-    def __init__(self, records, roles):
+    def __init__(self, IL, roles):
+        """
+
+        """
+        self.IL = IL
+        self.roles = roles
+
+        self.IL.sort(key = lambda x: x.role)
+        self.set_states()
+
+    @classmethod
+    def from_records(cls, records, roles):
         """
         Construct an annotated hypergraph from records.
 
@@ -35,14 +45,33 @@ class AnnotatedHypergraph(object):
         if records[0].get('eid') is None:
             for i in range(len(records)):
                 records[i]['eid'] = i
-        
-        self.roles = roles
-        self.IL = incidence_list_from_records(records, self.roles)
-        self.IL.sort(key = lambda x: x.role) # sort by roles for now
-        
-#         self.relabel()
-        
-        self.set_states()
+
+        IL = incidence_list_from_records(records, roles)
+
+        return cls(IL, roles)
+
+    @classmethod
+    def from_incidence(cls, dataset, root='./data/', relabel_roles=False, add_metadata=False):
+        """
+        """
+        incidence = pd.read_csv(root+dataset+'/incidence.csv')
+        edges = pd.read_csv(root+dataset+'/edges.csv', index_col=0)
+        incidence.columns = ['nid', 'eid', 'role']
+        roles = pd.read_csv(root+dataset+'/roles.csv', index_col=0, header=None, squeeze=True)
+
+        if relabel_roles:
+            incidence['role'] = incidence.role.apply(lambda x: roles[x])
+            roles = list(roles.values)
+        else:
+            roles = list(range(len(roles)))
+
+        if add_metadata:
+            metamapper = {ix:d for ix, d in zip(edges.index, edges.to_dict(orient='records'))}
+            incidence['meta'] = incidence.eid.apply(lambda x: metamapper[x])
+        else:
+            incidence['meta'] = None
+
+        return cls([NodeEdgeIncidence(**row) for ix,row in incidence.iterrows()], roles)   
 
     def set_states(self):
         self.node_list = np.unique([e.nid for e in self.IL])
@@ -86,6 +115,7 @@ class AnnotatedHypergraph(object):
         
         self.IL = [e for role in by_role for e in role]
     
+
     def degeneracy_avoiding_MCMC(self, n_steps = 1, verbose = True, role_labels = True):
         '''
         Avoids creating edges in which the same node appears multiple times. 
@@ -198,7 +228,7 @@ class AnnotatedHypergraph(object):
         else:
             self.R = np.ones(shape=(num_roles,num_roles))
 
-    def to_weighted_projection(self):
+    def to_weighted_projection(self, use_networkx=False):
         """
         Projects an annotated hypergraph to a weighted, directed graph.
 
@@ -207,7 +237,7 @@ class AnnotatedHypergraph(object):
         weight of one.
 
         Input:
-            None
+            use_networkx (bool): If True, returns a networkx DiGraph object.
         
         Output:
             weighted_edges (dict): A dictionary containing all source nodes as keys.
@@ -225,6 +255,11 @@ class AnnotatedHypergraph(object):
             edge = list(edge)
             for a,b in permutations(edge, 2):
                 weighted_edges[a.nid][b.nid] += self.R[role_map[a.role], role_map[b.role]]
+
+        if use_networkx:
+            weighted_edges = {source:{target:{'weight':val} for target,val in values.items()} for source, values in weighted_edges.items()}
+            G = nx.DiGraph(weighted_edges)
+            return G
 
         return weighted_edges
 
@@ -281,8 +316,7 @@ class AnnotatedHypergraph(object):
         print('Removed '  + str(k_removed) + ' singletons.')
         
     def relabel(self):
-        D = IL_to_dict(self.IL)
-        
+
         def relabel_by_field(D, field):
             
             D.sort(key = lambda x: x[field])
@@ -295,10 +329,9 @@ class AnnotatedHypergraph(object):
                 e[field] = j
             return(D)
         
-        D = relabel_by_field(D, 'eid')
-        D = relabel_by_field(D, 'nid')
-                
-        self.IL = dict_to_IL(D)
+        D = relabel_by_field(self.IL, 'eid')
+        D = relabel_by_field(self.IL, 'nid')
+
         self.set_states()
         
     def stub_matching(self):
