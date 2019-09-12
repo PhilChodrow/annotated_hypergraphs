@@ -44,7 +44,7 @@ class AnnotatedHypergraph(object):
         # Assign edge ids if not already present
         if records[0].get('eid') is None:
             for i in range(len(records)):
-                records[i]['eid'] = i
+                records[i]['eid'] = i+1
 
         IL = incidence_list_from_records(records, roles)
 
