@@ -4,6 +4,8 @@ from collections import Counter
 import networkx as nx
 
 from .utils import normalise_counters
+import numpy as np
+
 
 def local_role_density(annotated_hypergraph, include_focus=False, absolute_values=False):
     """
@@ -130,3 +132,38 @@ def modularity(annotated_hypergraph, return_communities=False):
         degrees:
     """
     raise NotImplementedError
+    
+def random_walk(G, n_steps, alpha = 0, nonbacktracking = False, alpha_ve = None, alpha_ev = None):
+    '''
+    conduct a random walk on network G, optionally with teleportation parameter alpha and nonbacktracking
+    '''
+    
+    V = np.zeros(n_steps)
+
+    nodes = list(G.nodes())
+    n = len(nodes)
+    v = np.random.choice(nodes)
+
+    # v2 eventually holds where we went last time. 
+    v2 = v 
+        
+    for i in range(n_steps):
+        N = G[v]
+        v_ = np.random.choice(list(N))
+        role = G[v][v_]['role']
+
+        if v < 0:
+            alpha = alpha_ev
+        else:
+            alpha = alpha_ve
+
+        if np.random.rand() < alpha[role]: 
+            i_ = np.random.randint(n)
+            v_ = nodes[i_]
+
+        if (v_ != v2) or (not nonbacktracking):
+            v2 = v
+            v = v_
+            V[i] = v
+    
+    return(V)

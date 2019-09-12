@@ -5,3 +5,5 @@ data
 __pycache__
 .vscode
 .noseids
+.DS_Store
+
