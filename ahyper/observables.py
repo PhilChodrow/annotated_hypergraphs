@@ -169,8 +169,8 @@ def connected_components(annotated_hypergraph):
     raise NotImplementedError
     weighted_projection = annotated_hypergraph.to_weighted_projection(use_networkx=True)
 
-    return _connected_components(weighted_projection)
-    
+    return _connected_components(weighted_projection)   
+
 def random_walk(G, n_steps, alpha = 0, nonbacktracking = False, alpha_ve = None, alpha_ev = None):
     '''
     conduct a random walk on network G, optionally with teleportation parameter alpha and nonbacktracking
