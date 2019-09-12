@@ -89,7 +89,7 @@ def shuffled_ensemble_features(annotated_hypergraph,
     for ix in range(num_shuffles):
         
         # Logging
-        if verbose and (ix % (num_shuffles//10)) == 0: print(str(ix)+'%', end='\r', flush=True)
+        if verbose and (ix % (num_shuffles//10)) == 0: print(str(100*ix/num_shuffles)+'%', end='\r', flush=True)
                     
         shuffle(n_steps=int(shuffle_fraction*num_stubs))
         
