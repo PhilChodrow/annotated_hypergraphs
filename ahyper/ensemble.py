@@ -1,6 +1,8 @@
 import os, json
 from collections import defaultdict
 
+import pandas as pd
+
 def data_features(annotated_hypergraph,
                   features):
     """
@@ -87,7 +89,7 @@ def shuffled_ensemble_features(annotated_hypergraph,
     for ix in range(num_shuffles):
         
         # Logging
-        if verbose and (ix % (num_shuffles//10)) == 0: print(str(ix)+'%', end='\r', flush=True)
+        if verbose and (ix % (num_shuffles//10)) == 0: print(str(100*ix/num_shuffles)+'%', end='\r', flush=True)
                     
         shuffle(n_steps=int(shuffle_fraction*num_stubs))
         
@@ -109,7 +111,9 @@ def save_feature_study(annotated_hypergraph,
                        features,
                        burn_fraction=None,
                        role_preserving=True,
-                       role_destroying=True
+                       role_destroying=True,
+                       root='./results/',
+                       verbose=False
                        ):
     """
     Calculate distribution of features for an ensemble of shuffled graphs.
@@ -123,6 +127,8 @@ def save_feature_study(annotated_hypergraph,
         burn_fraction (float): The fraction of stubs to be shuffled before data collection
         role_preserving (bool): If True, calculates role preserving ensemble (default True).
         role_destroying (bool): If True, calculates role destroying ensemble (default True).
+        root (str): Root directory to save files.
+        verbose (bool): If True, prints logging messages.
 
     Output:
         None : Files are saved to disk. 
@@ -139,44 +145,46 @@ def save_feature_study(annotated_hypergraph,
     A = annotated_hypergraph
     
     # Make directory if doesn't exist.
-    if not os.path.exists(f'./results/{data_name}'):
-        os.makedirs(f'./results/{data_name}')
+    if not os.path.exists(f'{root}{data_name}'):
+        os.makedirs(f'{root}{data_name}')
     
     # Make a log of what feature spec was used (although functions are not saved.) 
-    with open(f'./results/{data_name}/feature_log.json', 'w') as file:
+    with open(f'{root}{data_name}/feature_log.json', 'w') as file:
         file.write(json.dumps(features, default=str, indent=4))
     
     # Features of pure dataset
     data = data_features(A,
                      features)
     data = pd.Series(data)
-    data.to_csv(f'./results/{data_name}/original.csv')    
+    data.to_csv(f'{root}{data_name}/original.csv')    
         
     # Respect roles when performing shuffle
     if role_preserving:
+        if verbose: print("Running Role Preserving MCMC...")
         role_preserving_ensemble = shuffled_ensemble_features(A,
-                                        shuffle_fraction,
-                                        num_shuffles,
-                                        features,
+                                        shuffle_fraction=shuffle_fraction,
+                                        num_shuffles=num_shuffles,
+                                        features=features,
                                         burn_fraction=None,
                                         shuffle_algorithm='degeneracy_avoiding_MCMC',  
-                                        verbose=False)
+                                        verbose=verbose)
         
         role_preserving_ensemble = pd.DataFrame(role_preserving_ensemble).T 
-        role_preserving_ensemble.to_csv(f'./results/{data_name}/role_preserving_ensemble.csv', index=False, header=True)
+        role_preserving_ensemble.to_csv(f'{root}{data_name}/role_preserving_ensemble.csv', index=False, header=True)
 
     
     # How data looks when we do not respect roles.
     if role_destroying:
+        if verbose: print("Running Role Destroying MCMC...")
         role_destroying_ensemble = shuffled_ensemble_features(A,
-                                        shuffle_fraction,
-                                        num_shuffles,
-                                        features,
+                                        shuffle_fraction=shuffle_fraction,
+                                        num_shuffles=num_shuffles,
+                                        features=features,
                                         burn_fraction=None,
-                                        shuffle_algorithm='degeneracy_avoiding_MCMC',  
-                                        verbose=False)
+                                        shuffle_algorithm='_degeneracy_avoiding_MCMC_no_role',  
+                                        verbose=verbose)
 
         role_destroying_ensemble = pd.DataFrame(role_destroying_ensemble).T
-        role_destroying_ensemble.to_csv(f'./results/{data_name}/role_destroying_ensemble.csv', index=False, header=True)
+        role_destroying_ensemble.to_csv(f'{root}{data_name}/role_destroying_ensemble.csv', index=False, header=True)
     
     return None

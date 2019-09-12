@@ -57,7 +57,7 @@ class CentralityTests(TestCase):
 
         degrees = degree_centrality(self.A)
 
-        self.assertEqual(degrees[96], 2237.0)
+        self.assertAlmostEqual(degrees[96], 0.3063063063063063)
 
     def test_eigenvector_centrality(self):
         """ Test the eigenvector centrality calculation. """
