@@ -209,7 +209,24 @@ def random_walk(G, n_steps, alpha = 0, nonbacktracking = False, alpha_ve = None,
     return(V)
 
     
-def assortativity(A, n_samples, by_role = True, spearman = False):
+def assortativity(A, n_samples, by_role = True, spearman = True):
+    
+    '''
+    Return a stochastic approximation of the assortativity between nodes, optionally by roles. 
+
+    Notes: 
+        Not quite the same thing as the standard degree-assortativity coefficient for dyadic graphs due to the role of hyperedges. 
+        Generalizes the uniform measure in the "Configuration Models of Random Hypergraphs"
+        
+    Input: 
+        A [AnnotatedHypergraph]: the annotated hypergraph on which to measure
+        n_samples [int]: the number of hyperedges to sample
+        by_role [bool]: if True, break out all the correlations by pairs of node roles. 
+        spearman [bool]: if True, replace degrees by their ranks (within each pair of node_roles if by_role)
+        
+    Output: 
+        A pd.DataFrame containing degree-correlation coefficients. 
+    '''
     
     # first, construct a lookup giving the number of edges incident to each pair of nodes, by role if specified. 
     def discount_lookup(role_1, role_2, by_role = by_role):
