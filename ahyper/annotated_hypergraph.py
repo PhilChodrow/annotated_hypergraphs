@@ -141,28 +141,27 @@ class AnnotatedHypergraph(object):
             l = np.random.randint(len(E1))
             
             # if the two node-edge incidences have different roles, then try again
-            if role_labels: 
-	            if E0[k].role != E1[l].role:
-	                k_rejected += 1
-            
+            if role_labels and (E0[k].role != E1[l].role): 
+                k_rejected += 1
+                continue
+
+            # Construct the proposal swap 
+
+            E0_prop = E0.copy()
+            E0_prop[k] = NodeEdgeIncidence(E1[l].nid, E0[k].role, E0[k].eid, E0[k].meta)
+
+            E1_prop = E1.copy()
+            E1_prop[l] = NodeEdgeIncidence(E0[k].nid, E1[l].role, E1[l].eid, E1[l].meta)
+                                    
+            # if either of the edges would become degenerate, reject the proposal
+            if (check_degenerate(E0_prop) or check_degenerate(E1_prop)):
+                k_rejected += 1
+
+            # otherwise, accept the proposal
             else:
-                # construct the proposal swap 
-
-                E0_prop = E0.copy()
-                E0_prop[k] = NodeEdgeIncidence(E1[l].nid, E0[k].role, E0[k].eid, E0[k].meta)
-
-                E1_prop = E1.copy()
-                E1_prop[l] = NodeEdgeIncidence(E0[k].nid, E1[l].role, E1[l].eid, E1[l].meta)
-                                       
-                # if either of the edges would become degenerate, reject the proposal
-                if (check_degenerate(E0_prop) or check_degenerate(E1_prop)):
-                    k_rejected += 1
-                # otherwise, accept the proposal
-                else:
-                    edges[i] = E0_prop                        
-                    edges[j] = E1_prop
-            
-            N += 1
+                edges[i] = E0_prop                        
+                edges[j] = E1_prop
+                N += 1
                         
         # update self.IL
         self.IL = [e for E in edges for e in edges[E]]
@@ -173,7 +172,7 @@ class AnnotatedHypergraph(object):
 
     def _degeneracy_avoiding_MCMC_no_role(self, n_steps=1, verbose=False):
         """ Helper function for systematic methods. """        
-        return self.degeneracy_avoiding_MCMC(n_steps=n_steps, verbose=verbose)
+        return self.degeneracy_avoiding_MCMC(n_steps=n_steps, verbose=verbose, role_labels=False)
 
     def get_IL(self):
         """"""
