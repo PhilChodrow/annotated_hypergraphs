@@ -165,7 +165,7 @@ def save_feature_study(annotated_hypergraph,
                                         shuffle_fraction=shuffle_fraction,
                                         num_shuffles=num_shuffles,
                                         features=features,
-                                        burn_fraction=None,
+                                        burn_fraction=burn_fraction,
                                         shuffle_algorithm='degeneracy_avoiding_MCMC',  
                                         verbose=verbose)
         
@@ -180,7 +180,7 @@ def save_feature_study(annotated_hypergraph,
                                         shuffle_fraction=shuffle_fraction,
                                         num_shuffles=num_shuffles,
                                         features=features,
-                                        burn_fraction=None,
+                                        burn_fraction=burn_fraction,
                                         shuffle_algorithm='_degeneracy_avoiding_MCMC_no_role',  
                                         verbose=verbose)
 
