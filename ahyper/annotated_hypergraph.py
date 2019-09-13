@@ -71,6 +71,9 @@ class AnnotatedHypergraph(object):
         else:
             incidence['meta'] = None
 
+        # Temporary fix for discrepancy between constructors.
+        incidence['eid'] = incidence['eid'] + 1
+
         return cls([NodeEdgeIncidence(**row) for ix,row in incidence.iterrows()], roles)   
 
     def set_states(self):
