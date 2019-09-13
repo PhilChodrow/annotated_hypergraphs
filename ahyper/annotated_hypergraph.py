@@ -375,9 +375,6 @@ class AnnotatedHypergraph(object):
     
     
 
-        
-        
-
 def bipartite_edge_swap(e0, e1):
     """
     Creates two new swapped edges by permuting the node ids.
