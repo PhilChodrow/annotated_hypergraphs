@@ -180,16 +180,21 @@ def random_walk(G, n_steps, alpha = 0, nonbacktracking = False, alpha_ve = None,
     
     V = np.zeros(n_steps)
 
-    nodes = list(G.nodes())
+    nodes = np.array(list(G.nodes()))
+    nodes = nodes[nodes >= 0]
     n = len(nodes)
     v = np.random.choice(nodes)
-
+    
     # v2 eventually holds where we went last time. 
     v2 = v 
         
     for i in range(n_steps):
         N = G[v]
         v_ = np.random.choice(list(N))
+        if nonbacktracking:
+            while v_ == v2:
+                v_ = np.random.choice(list(N))
+            
         role = G[v][v_]['role']
 
         if v < 0:
@@ -201,12 +206,29 @@ def random_walk(G, n_steps, alpha = 0, nonbacktracking = False, alpha_ve = None,
             i_ = np.random.randint(n)
             v_ = nodes[i_]
 
-        if (v_ != v2) or (not nonbacktracking):
-            v2 = v
-            v = v_
-            V[i] = v
+
+        v2 = v
+        v = v_
+        V[i] = v
     
     return(V)
+
+def random_walk_pagerank(A, n_steps, nonbacktracking = False, alpha_1 = None, alpha_2 = None, return_path = False):
+        
+        G = A.bipartite_graph()
+        
+        V = random_walk(G, n_steps, nonbacktracking=nonbacktracking, alpha_ve = alpha_1, alpha_ev = alpha_2) 
+        counts = np.unique(V, return_counts=True)
+        ix = counts[0] >= 0
+        v = counts[1][ix]
+        v = v / v.sum()
+        labels = counts[0][ix]
+        d = {labels[i]: v[i] for i in range(len(v))}
+        if return_path: 
+            return(d,  V)
+        else:
+            return(d)
+
 
     
 def assortativity(A, n_samples, by_role = True, spearman = True):
