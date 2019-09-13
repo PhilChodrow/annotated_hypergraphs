@@ -5,7 +5,9 @@ import networkx as nx
 
 from .utils import normalise_counters
 import numpy as np
-
+from itertools import combinations, permutations
+from collections import defaultdict
+import pandas as pd
 
 def local_role_density(annotated_hypergraph, include_focus=False, absolute_values=False):
     """
@@ -169,8 +171,8 @@ def connected_components(annotated_hypergraph):
     raise NotImplementedError
     weighted_projection = annotated_hypergraph.to_weighted_projection(use_networkx=True)
 
-    return _connected_components(weighted_projection)
-    
+    return _connected_components(weighted_projection)   
+
 def random_walk(G, n_steps, alpha = 0, nonbacktracking = False, alpha_ve = None, alpha_ev = None):
     '''
     conduct a random walk on network G, optionally with teleportation parameter alpha and nonbacktracking
@@ -207,4 +209,127 @@ def random_walk(G, n_steps, alpha = 0, nonbacktracking = False, alpha_ve = None,
     return(V)
 
     
+def assortativity(A, n_samples, by_role = True, spearman = True):
+    
+    '''
+    Return a stochastic approximation of the assortativity between nodes, optionally by roles. 
 
+    Notes: 
+        Not quite the same thing as the standard degree-assortativity coefficient for dyadic graphs due to the role of hyperedges. 
+        Generalizes the uniform measure in the "Configuration Models of Random Hypergraphs"
+        
+    Input: 
+        A [AnnotatedHypergraph]: the annotated hypergraph on which to measure
+        n_samples [int]: the number of hyperedges to sample
+        by_role [bool]: if True, break out all the correlations by pairs of node roles. 
+        spearman [bool]: if True, replace degrees by their ranks (within each pair of node_roles if by_role)
+        
+    Output: 
+        A pd.DataFrame containing degree-correlation coefficients. 
+    '''
+    
+    # first, construct a lookup giving the number of edges incident to each pair of nodes, by role if specified. 
+    def discount_lookup(role_1, role_2, by_role = by_role):
+
+        weighted_edges = defaultdict(lambda: defaultdict(lambda: 0.0))
+        for eid, edge in groupby(A.get_IL(), lambda x: x.eid):
+                edge = list(edge)
+                for a,b in combinations(edge, 2):
+                    if by_role:
+                        if (a.role == role_1) and (b.role == role_2) or (a.role == role_2) and (b.role == role_1):
+                            weighted_edges[a.nid][b.nid] += 1
+                    else:
+                        weighted_edges[a.nid][b.nid] += 1
+
+        return(weighted_edges)
+    
+    
+    D = {(role_1, role_2) : discount_lookup(role_1, role_2) for role_1, role_2 in permutations(A.roles, 2)}
+    D = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: 0.0)), D)
+    
+    
+    # next, construct the degree lookup, again by role if specified. 
+    degs = A.node_degrees(by_role = by_role)
+    
+    # containers for the data generated in the loop
+    
+    max_len = max(len(role) for role in A.roles)
+    
+    dtype = 'S' + str(max_len)
+    
+    role_1 = np.empty(2*n_samples, dtype=dtype)
+    role_2 = np.empty(2*n_samples, dtype=dtype)
+    deg_1  = np.zeros(2*n_samples)
+    deg_2  = np.zeros(2*n_samples)
+    
+    # generate a dict which for each eid gives the list of NodeEdgeIncidences in that edge. 
+    IL = A.get_IL()
+    IL.sort(key = lambda e: (e.eid, e.role))
+    edges = groupby(IL, lambda e: (e.eid))
+    edges = {k: list(v) for k, v in edges}
+    
+    # main loop
+    for k in 2*np.arange(n_samples):
+        
+        # choose a random edge and two nodes on it. 
+        i = np.random.randint(1, A.m+1)
+        
+        edge = edges[i]
+        
+        i_ = np.random.randint(len(edge))
+        j_ = np.random.randint(len(edge))
+
+        while i_ == j_:
+            i_ = np.random.randint(len(edge))
+            j_ = np.random.randint(len(edge))
+        
+        u = edges[i][i_].nid
+        v = edges[i][j_].nid
+
+        u_role = edges[i][i_].role
+        v_role = edges[i][j_].role
+        
+        # compute the discount -- this is the number of edges between u and v themselves.
+        discount = D[(u_role, v_role)][u][v]
+        
+        role_1[k] = u_role
+        role_2[k] = v_role
+        role_1[k+1] = v_role
+        role_2[k+1] = u_role
+        
+        if by_role:
+            deg_1[k] = degs[u][u_role] - discount
+            deg_2[k] = degs[v][v_role] - discount
+            
+            deg_1[k+1] = degs[u][u_role] - discount
+            deg_2[k+1] = degs[v][v_role] - discount
+        else:
+            deg_1[k]    = degs[u] - discount
+            deg_2[k]   = degs[v] - discount
+            deg_1[k+1] = degs[u] - discount
+            deg_2[k+1] = degs[v] - discount
+    
+    # construct a DataFrame with the results. 
+    
+    role_1 = role_1.astype('U' + str(max_len))
+    role_2 = role_2.astype('U' + str(max_len))
+    
+    df = pd.DataFrame({'role_1' : role_1, 'role_2' : role_2, 'deg_1' : deg_1, 'deg_2' : deg_2})
+    
+    df = df.astype({'deg_1': 'int32', 'deg_2' : 'int32'})
+    
+    if by_role: 
+        grouped = df.groupby(['role_1', 'role_2'])
+        if spearman:
+            df['deg_1'] = grouped['deg_1'].rank()
+            df['deg_2'] = grouped['deg_2'].rank()
+        
+        df = df.groupby(['role_1', 'role_2'])    
+        corrs = df.corr().iloc[0::2,-1]
+    else:
+        if spearman:
+            df['deg_1'] = df['deg_1'].rank()
+            df['deg_2'] = df['deg_2'].rank()
+        corrs = df.corr().iloc[0::2,-1]
+            
+    return(pd.DataFrame(corrs))
