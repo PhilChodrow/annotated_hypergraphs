@@ -368,7 +368,7 @@ class AnnotatedHypergraph(object):
         '''
         return an nx.Graph() in which both nodes and edges occur as nodes, and are linked according to incidence. 
         '''
-        ebunch = [(e.nid, -e.eid, {'role' : e.role}) for e in self.get_IL()]
+        ebunch = [(e.nid, -e.eid-1, {'role' : e.role}) for e in self.get_IL()]
         G = nx.Graph()
         G.add_edges_from(ebunch)
         return(G)
