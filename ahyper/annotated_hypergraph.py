@@ -22,6 +22,7 @@ class AnnotatedHypergraph(object):
 
         self.IL.sort(key = lambda x: x.role)
         self.set_states()
+        self.sort(by='eid')
 
     @classmethod
     def from_records(cls, records, roles):
@@ -82,6 +83,7 @@ class AnnotatedHypergraph(object):
         self.n = len(self.node_list)
         self.m = len(self.edge_list)
         self.R = None
+        self.sort_key = None
         
 
     def get_node_list(self):
@@ -92,7 +94,22 @@ class AnnotatedHypergraph(object):
         """"""
         return self.edge_list
     
-    def MCMC(self, n_steps = 1, avoid_degeneracy = True, **kwargs):
+    def sort(self, by='eid', reverse=False):
+        """
+        Sorts the incidence list.
+
+        Keeps a track of what key the incidence list is sorted by
+        and does not attempt to sort if already sorted.
+
+        Input:
+            by (str): Choice from ['nid','eid','role'] 
+            reverse (bool): If True, reverse the sorting.
+        """
+
+        if self.sort_key == by:
+            return None
+        else:
+            self.IL.sort(key=lambda x: getattr(x, by), reverse=reverse)
         if avoid_degeneracy:
             alg = self.degeneracy_avoiding_MCMC
         else:
@@ -185,9 +202,7 @@ class AnnotatedHypergraph(object):
         """"""
         return records_from_incidence_list(self.IL, role_fields = self.roles)
     
-    def node_degrees(self, by_role = False):
-        """"""
-        self.IL.sort(key = lambda x: x.role)
+        self.sort(by='role')
         if by_role:
             br = {role: list(v) for role, v in groupby(self.IL, lambda x: x.role)}
             DT = {role : Counter([e.nid for e in br[role]]) for role in self.roles}
@@ -201,7 +216,7 @@ class AnnotatedHypergraph(object):
     def edge_dimensions(self, by_role = False):
         """"""
         
-        self.IL.sort(key = lambda x: x.role)
+        self.sort(by='role')
         if by_role:
             br =  {role: list(v) for role, v in groupby(self.IL, lambda x: x.role)}
             DT = {role : Counter([e.eid for e in br[role]]) for role in self.roles}
@@ -293,7 +308,7 @@ class AnnotatedHypergraph(object):
     
     def count_degeneracies(self):
         """Return the number of edges in which the same node appears multiple times"""
-        self.IL.sort(key = lambda x: x.eid)
+        self.sort(by='eid')
         by_edges = [list(v) for eid, v in groupby(self.IL, lambda x: x.eid)]
         
         return(sum([check_degenerate(E) for E in by_edges]))
@@ -307,6 +322,7 @@ class AnnotatedHypergraph(object):
         May be overaggressive in  node removal -- further tests necessary 
         '''
         self.IL.sort(key = lambda x: (x.eid, x.nid, precedence[x.role]))
+        self.sort_key = 'custom'
         grouped = [list(v) for eid, v in groupby(self.IL, lambda x: x.eid)]
         
         IL_ = []
