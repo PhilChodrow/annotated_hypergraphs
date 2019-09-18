@@ -7,14 +7,25 @@ from ahyper.annotated_hypergraph import AnnotatedHypergraph
 
 class ConstructionTests(TestCase):
     """
-    Basic tests for the construction of Annotated Hypergraphs
+    Basic tests for the construction of Annotated Hypergraphs.
     """
 
-    def test_constructor(self):
+    def test_record_constructor(self):
         """
+        Test building from records.
         """
     
         A = AnnotatedHypergraph.from_records(DATA, ROLE_FIELDS)
+
+    def test_incidence_constructor(self):
+        """
+        Test building from incidence data.
+        """
+    
+        A = AnnotatedHypergraph.from_incidence(dataset='enron', 
+                                               root='./data/',
+                                               relabel_roles=True,
+                                               add_metadata=True)
 
 class MCMCTests(TestCase):
     """
