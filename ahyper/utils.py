@@ -26,7 +26,10 @@ class NodeEdgeIncidence(object):
         return getattr(self, key)
     
     def __setitem__(self, key, value):
-        return setattr(self, key, value)        
+        return setattr(self, key, value) 
+
+    def to_dict(self):
+        return {key:getattr(self,key) for key in self.__class__.__slots__}       
 
 def incidence_list_from_records(data, role_fields):
     """
