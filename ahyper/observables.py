@@ -297,7 +297,7 @@ def assortativity(annotated_hypergraph, n_samples, by_role=True, spearman=True):
 
     A = annotated_hypergraph
     # first, construct a lookup giving the number of edges incident to each pair of nodes, by role if specified. 
-    def discount_lookup(role_1, role_2, by_role = by_role):
+    def discount_lookup(role_1, role_2, by_role=by_role):
 
         weighted_edges = defaultdict(lambda: defaultdict(lambda: 0.0))
         for eid, edge in groupby(A.get_IL(), lambda x: x.eid):
@@ -398,4 +398,4 @@ def assortativity(annotated_hypergraph, n_samples, by_role=True, spearman=True):
             df['deg_2'] = df['deg_2'].rank()
         corrs = df.corr().iloc[0::2,-1]
             
-    return(pd.DataFrame(corrs))
+    return pd.DataFrame(corrs)
