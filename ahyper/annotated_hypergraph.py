@@ -206,7 +206,7 @@ class AnnotatedHypergraph(object):
         k_rejected = 0
         N = 0
         
-        while(N < n_steps):
+        while (N < n_steps):
             
             # select two random hyperedges
             i, j = np.random.randint(1, self.m+1, 2)
@@ -240,7 +240,6 @@ class AnnotatedHypergraph(object):
                         
         # update self.IL
         self.IL = [e for E in edges for e in edges[E]]
-        self.sort(by='role')
             
         if verbose: 
             print(str(n_steps) + ' steps taken, ' + str(k_rejected) + ' steps rejected.')
