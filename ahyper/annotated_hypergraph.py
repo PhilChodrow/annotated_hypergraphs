@@ -71,9 +71,6 @@ class AnnotatedHypergraph(object):
         else:
             incidence['meta'] = None
 
-        # Temporary fix for discrepancy between constructors.
-        incidence['eid'] = incidence['eid'] + 1
-
         return cls([NodeEdgeIncidence(**row) for ix,row in incidence.iterrows()], roles)   
 
     def set_states(self):
@@ -136,7 +133,7 @@ class AnnotatedHypergraph(object):
         while(N < n_steps):
             
             # select two random hyperedges
-            i, j = np.random.randint(1, self.m+1, 2)
+            i, j = np.random.randint(0, self.m, 2)
             E0, E1 = edges[i], edges[j] 
             
             # select a random node-edge incidence from each
@@ -185,20 +182,27 @@ class AnnotatedHypergraph(object):
         """"""
         return records_from_incidence_list(self.IL, role_fields = self.roles)
     
-    def node_degrees(self, by_role = False):
+    def node_degrees(self, by_role = False, as_matrix = False):
         """"""
         self.IL.sort(key = lambda x: x.role)
         if by_role:
             br = {role: list(v) for role, v in groupby(self.IL, lambda x: x.role)}
             DT = {role : Counter([e.nid for e in br[role]]) for role in self.roles}
             D = {k : {role : DT[role][k] for role in self.roles} for k in self.node_list}
+            if as_matrix:
+                M = np.zeros((self.n, len(self.roles)))
+                ix_map = {ix:role for ix,role in enumerate(self.roles)}
+                for i in range(self.n):
+                    for j in ix_map:
+                        M[i][j] = D[self.node_list[i]][ix_map[j]]
+                return(M)
             return(D)
             
         else:
             V = [e.nid for e in self.IL]
             return(dict(Counter(V)))
         
-    def edge_dimensions(self, by_role = False):
+    def edge_dimensions(self, by_role = False, as_matrix = False):
         """"""
         
         self.IL.sort(key = lambda x: x.role)
@@ -206,6 +210,13 @@ class AnnotatedHypergraph(object):
             br =  {role: list(v) for role, v in groupby(self.IL, lambda x: x.role)}
             DT = {role : Counter([e.eid for e in br[role]]) for role in self.roles}
             D = {k : {role : DT[role][k] for role in self.roles} for k in self.edge_list}
+            if as_matrix:
+                M = np.zeros((self.m, len(self.roles)))
+                ix_map = {ix:role for ix,role in enumerate(self.roles)}
+                for i in range(self.m):
+                    for j in ix_map:
+                        M[i][j] = D[self.edge_list[i]][ix_map[j]]
+                return(M)
             return(D)
         else:
             E = [e.eid for e in self.IL]
@@ -234,7 +245,7 @@ class AnnotatedHypergraph(object):
         else:
             self.R = np.ones(shape=(num_roles,num_roles))
 
-    def to_weighted_projection(self, use_networkx=False):
+    def to_weighted_projection(self, use_networkx=False, as_matrix=False):
         """
         Projects an annotated hypergraph to a weighted, directed graph.
 
@@ -250,6 +261,7 @@ class AnnotatedHypergraph(object):
                                    The values are dictionaries of targets which in turn
                                    contain weights of interaction.
         """
+        
         weighted_edges = defaultdict(lambda: defaultdict(lambda: 0.0))
         role_map = {role:ix for ix,role in enumerate(self.roles)}
 
@@ -261,7 +273,14 @@ class AnnotatedHypergraph(object):
             edge = list(edge)
             for a,b in permutations(edge, 2):
                 weighted_edges[a.nid][b.nid] += self.R[role_map[a.role], role_map[b.role]]
-
+        
+        if as_matrix:
+            M = np.zeros((self.n, self.n))
+            for i in range(self.n):
+                for j in range(self.n):
+                    M[i,j] = weighted_edges[self.node_list[i]][self.node_list[j]]
+            return(M)
+            
         if use_networkx:
             weighted_edges = {source:{target:{'weight':val} for target,val in values.items()} for source, values in weighted_edges.items()}
             G = nx.DiGraph(weighted_edges)
@@ -375,8 +394,35 @@ class AnnotatedHypergraph(object):
         G.add_edges_from(ebunch)
         return(G)
     
+    def null_expectation_matrix(self):
+        '''
+        return the second term in the dyadic modularity described in the draft text.
+        '''
+        if self.R is None:
+            self.assign_role_interaction_matrix()
+        
+        K = self.edge_dimensions(by_role = True, as_matrix = True)
+        D = self.node_degrees(by_role = True, as_matrix = True)
+        
+        D_ = D.sum(axis = 0) 
+        
+        Gamma = np.dot(K.T, K) / np.outer(D_, D_)
+        
+        M = np.zeros((self.n,self.n))
+        
+        for x in range(len(self.roles)):
+            for y in range(len(self.roles)):
+                M += np.outer(D[:,x],D[:,y]) * Gamma[x,y] * self.R[x,y]
+                
+        return(M)
     
-
+    def modularity_matrix(self, symmetrize=False):
+        
+        B = self.to_weighted_projection(as_matrix = True) - self.null_expectation_matrix()
+        if symmetrize:
+            B = (B.T + B)/2
+        return B
+    
 def bipartite_edge_swap(e0, e1):
     """
     Creates two new swapped edges by permuting the node ids.
@@ -407,11 +453,3 @@ def check_degenerate(E):
     '''E is a set of node-edge incidences corresponding to a single edge'''
     E_distinct = set([e.nid for e in E])
     return(len(E_distinct) != len(E))
-
-
-
-
-
-
-    
-    
