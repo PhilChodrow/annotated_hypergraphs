@@ -122,3 +122,8 @@ def entropy_value(func):
     def ent_value(args, **kwargs):
         return entropy(pd.Series(func(args, **kwargs)))
     return ent_value
+
+def sort_matrix(A, v):
+    row_sorted = A[np.argsort(v)]
+    col_sorted = row_sorted[:, np.argsort(v)]
+    return(col_sorted)
