@@ -171,15 +171,34 @@ def connected_components(annotated_hypergraph):
         connected_components (int): The number of connected components.
     """
 
-    raise NotImplementedError
     weighted_projection = annotated_hypergraph.to_weighted_projection(use_networkx=True)
 
     return _connected_components(weighted_projection)   
 
-def random_walk(G, n_steps, alpha = 0, nonbacktracking = False, alpha_ve = None, alpha_ev = None):
-    '''
-    conduct a random walk on network G, optionally with teleportation parameter alpha and nonbacktracking
-    '''
+def random_walk(G, 
+                n_steps, 
+                alpha=0, 
+                nonbacktracking=False,
+                alpha_ve=None, 
+                alpha_ev=None):
+    """
+    Conduct a random walk on a network G, optionally with teleportation parameter alpha and nonbacktracking.
+
+    Note: Assumes a randomly chosen starting node.
+
+    Input:
+        G (nx.Graph/nx.DiGraph): A graph to conduct the random walk.
+        n_steps (int): The number of steps the random walk should take.
+        alpha (float): 
+        nonbacktracking (bool):
+        alpha_ve (float):
+        alpha_ev (float):
+
+    Output:
+        V (np.array):
+
+    TODO: Check this works (test) and make it clear differences between alphas.
+    """
     
     V = np.zeros(n_steps)
 
@@ -214,29 +233,54 @@ def random_walk(G, n_steps, alpha = 0, nonbacktracking = False, alpha_ve = None,
         v = v_
         V[i] = v
     
-    return(V)
+    return V
 
-def random_walk_pagerank(A, n_steps, nonbacktracking = False, alpha_1 = None, alpha_2 = None, return_path = False):
+def random_walk_pagerank(annotated_hypergraph, 
+                         n_steps, 
+                         nonbacktracking=False,
+                         alpha_1=None,
+                         alpha_2=None,
+                         return_path=False):
+    """
+    Calculate the random walk PageRank for each node in the network
+    by sampling.
+
+    Input:
+        annotated_hypergraph (AnnotatedHypergraph): The hypergraph to apply PageRank to.
+        n_steps (int): The number of steps to take in the random walk.
+        nonbacktracking (bool): If True, the random walk is non-backtracking.
+        alpha_1 (float):
+        alpha_2 (float):
+        return_path (bool): If True, returns also the path of the random walk.
+
+    Output:
+        pagerank (dict): A dictionary of node:pagerank pairs.
+        V (np.array) [optional]: The random walk trajectory. 
+
+    """    
         
-        G = A.bipartite_graph()
-        
-        V = random_walk(G, n_steps, nonbacktracking=nonbacktracking, alpha_ve = alpha_1, alpha_ev = alpha_2) 
-        counts = np.unique(V, return_counts=True)
-        ix = counts[0] >= 0
-        v = counts[1][ix]
-        v = v / v.sum()
-        labels = counts[0][ix]
-        d = {labels[i]: v[i] for i in range(len(v))}
-        if return_path: 
-            return(d,  V)
-        else:
-            return(d)
+    A = annotated_hypergraph
+
+    G = A.to_bipartite_graph()
+    
+    V = random_walk(G, n_steps, nonbacktracking=nonbacktracking, 
+                    alpha_ve=alpha_1, alpha_ev=alpha_2) 
+                    
+    counts = np.unique(V, return_counts=True)
+    ix = counts[0] >= 0
+    v = counts[1][ix]
+    v = v / v.sum()
+    labels = counts[0][ix]
+    d = {labels[i]: v[i] for i in range(len(v))}
+    if return_path: 
+        return d,V
+    else:
+        return d
 
 
     
-def assortativity(A, n_samples, by_role = True, spearman = True):
-    
-    '''
+def assortativity(annotated_hypergraph, n_samples, by_role=True, spearman=True):
+    """
     Return a stochastic approximation of the assortativity between nodes, optionally by roles. 
 
     Notes: 
@@ -244,17 +288,19 @@ def assortativity(A, n_samples, by_role = True, spearman = True):
         Generalizes the uniform measure in the "Configuration Models of Random Hypergraphs"
         
     Input: 
-        A [AnnotatedHypergraph]: the annotated hypergraph on which to measure
-        n_samples [int]: the number of hyperedges to sample
-        by_role [bool]: if True, break out all the correlations by pairs of node roles. 
-        spearman [bool]: if True, replace degrees by their ranks (within each pair of node_roles if by_role)
+        annotated_hypergraph (AnnotatedHypergraph): The annotated hypergraph on which to measure
+        n_samples (int): The number of hyperedges to sample
+        by_role (bool): If True, break out all the correlations by pairs of node roles. 
+        spearman (bool): If True, replace degrees by their ranks (within each pair of node_roles if 
+                         by_role)
         
     Output: 
         A pd.DataFrame containing degree-correlation coefficients. 
-    '''
-    
+    """
+
+    A = annotated_hypergraph
     # first, construct a lookup giving the number of edges incident to each pair of nodes, by role if specified. 
-    def discount_lookup(role_1, role_2, by_role = by_role):
+    def discount_lookup(role_1, role_2, by_role=by_role):
 
         weighted_edges = defaultdict(lambda: defaultdict(lambda: 0.0))
         for eid, edge in groupby(A.get_IL(), lambda x: x.eid):
@@ -268,10 +314,8 @@ def assortativity(A, n_samples, by_role = True, spearman = True):
 
         return(weighted_edges)
     
-    
     D = {(role_1, role_2) : discount_lookup(role_1, role_2) for role_1, role_2 in permutations(A.roles, 2)}
     D = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: 0.0)), D)
-    
     
     # next, construct the degree lookup, again by role if specified. 
     degs = A.node_degrees(by_role = by_role)
@@ -356,12 +400,9 @@ def assortativity(A, n_samples, by_role = True, spearman = True):
             df['deg_1'] = df['deg_1'].rank()
             df['deg_2'] = df['deg_2'].rank()
         corrs = df.corr().iloc[0::2,-1]
-            
-    return(pd.DataFrame(corrs))
 
-
-
-
+    return pd.DataFrame(corrs)
+  
 
 def multiway_spectral(A, A0, k):
     

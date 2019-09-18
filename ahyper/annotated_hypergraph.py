@@ -40,8 +40,8 @@ class AnnotatedHypergraph(object):
         as metadata for each edge.
 
         Input:
-            records [list]: A list of records (JSON-like)
-            roles [list]: A list of role labels
+            records (list): A list of records (JSON-like)
+            roles (list): A list of role labels
 
         Output:
             AnnotatedHypergraph

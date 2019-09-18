@@ -3,7 +3,9 @@ from data_loader import DATA, ROLE_FIELDS
 
 from ahyper.annotated_hypergraph import AnnotatedHypergraph
 from ahyper.observables import (local_role_density, degree_centrality, 
-                                eigenvector_centrality, pagerank_centrality)
+                                eigenvector_centrality, pagerank_centrality,
+                                connected_components, random_walk, random_walk_pagerank,
+                                assortativity)
 
 class DensityTests(TestCase):
     """
@@ -72,3 +74,44 @@ class CentralityTests(TestCase):
         pagerank = pagerank_centrality(self.A)
 
         self.assertAlmostEqual(pagerank[8], 0.01516827830191012)
+
+    def test_connected_components(self):
+        """ Test the number of connected components."""
+
+        components = connected_components(self.A)
+
+        self.assertEqual(components, 3)
+
+class RandomWalkTests(TestCase):
+    """
+    Basic tests for methods including random walks.
+    """
+    def setUp(self):
+        self.A = AnnotatedHypergraph.from_records(DATA, ROLE_FIELDS)
+
+    def tearDown(self):
+        self.A = None
+
+    def test_random_walk(self):
+        """Test random walk method. """
+        G = self.A.to_bipartite_graph()
+        rw = random_walk(G,
+                         n_steps=1000,
+                         alpha=0.1,
+                         nonbacktracking=False)
+
+    def test_pagerank(self):
+        """ Test random walk PageRank. """
+        pagerank = random_walk_pagerank(self.A,
+                                        n_steps=1000,
+                                        nonbacktracking=False,
+                                        alpha_1=0.1,
+                                        alpha_2=0.2,
+                                        return_path=False)
+
+    def test_sampled_assortativity(self):
+        """Test sampled assortativity. """
+        assort = assortativity(self.A,
+                               n_samples=1000,
+                               by_role=True,
+                               spearman=True)
