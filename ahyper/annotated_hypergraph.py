@@ -137,18 +137,23 @@ class AnnotatedHypergraph(object):
         and does not attempt to sort if already sorted.
 
         Input:
-            by (str): Choice from ['nid','eid','role'] 
+            by (str,list): Choice from ['nid','eid','role'], or a subset of. 
             reverse (bool): If True, reverse the sorting.
         """
+        if isinstance(by, str):
+            by = [by]
 
-        if self.sort_key == by:
+        sort_key = '_'.join(by)
+
+        if self.sort_key == sort_key:
             return None
         else:
-            self.IL.sort(key=lambda x: getattr(x, by), reverse=reverse)
+            self.IL.sort(key=lambda x: [getattr(x, b) for b in by], reverse=reverse)
 
     def MCMC(self, n_steps=1, avoid_degeneracy=True, **kwargs):
         """
-
+        Performs iterations of the MCMC algorithm to perform node swaps in the
+        annotated hypergraph.
 
         Input:
             n_steps (int): The number of Monte Carlo steps (swaps) to take.
@@ -166,12 +171,12 @@ class AnnotatedHypergraph(object):
         
         alg(n_steps, **kwargs)
     
-    def _stub_labeled_MCMC(self, n_steps = 1):
+    def _stub_labeled_MCMC(self, n_steps=1):
         """
         Can create degeneracies, probably deprecated
         """
         
-        self.IL.sort(key = lambda x: x.role)
+        self.sort(by='role')
         by_role = [list(v) for role, v in groupby(self.IL, lambda x: x.role)]
         
         # distribute steps over the role partition, using coupon-collector heuristic
@@ -194,7 +199,7 @@ class AnnotatedHypergraph(object):
         # TODO: easier to work on a transformed data structure in which incidences are grouped into hyper edges
         # TODO: sorting will hit runtime quite a bit - easy first step in optimisation.
 
-        self.IL.sort(key = lambda e: (e.eid, e.role))
+        self.sort(by=['eid','role'])
         grouped = groupby(self.IL, lambda e: (e.eid))
         edges = {k: list(v) for k, v in grouped}
         
@@ -235,7 +240,7 @@ class AnnotatedHypergraph(object):
                         
         # update self.IL
         self.IL = [e for E in edges for e in edges[E]]
-        self.IL.sort(key = lambda x: x.role)
+        self.sort(by='role')
             
         if verbose: 
             print(str(n_steps) + ' steps taken, ' + str(k_rejected) + ' steps rejected.')
