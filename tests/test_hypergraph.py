@@ -140,3 +140,11 @@ class ConversionTests(TestCase):
         
         # One particular example
         self.assertEqual(weighted_edges[0][6], 16.0)
+
+    def test_convert_to_bipartite_graph(self):
+        """Test conversion to a bipartite graph."""
+
+        G = self.A.to_bipartite_graph()
+
+        self.assertEqual(len(G.nodes()), self.A.n+self.A.m)
+        
