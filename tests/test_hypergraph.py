@@ -37,7 +37,7 @@ class MCMCTests(TestCase):
 
     def tearDown(self):
         self.A = None
-    
+
     def test_degree_and_dimension_preserved(self):
         """
         Ensure degree and dimension sequence is preserved at each step.
@@ -46,7 +46,7 @@ class MCMCTests(TestCase):
         d0 = self.A.node_degrees(by_role=True)
         k0 = self.A.edge_dimensions(by_role=True)
         
-        self.A.stub_labeled_MCMC(n_steps=1)
+        self.A.MCMC(n_steps=1, avoid_degeneracy=True)
 
         d = self.A.node_degrees(by_role=True)
         k = self.A.edge_dimensions(by_role=True)
@@ -54,7 +54,7 @@ class MCMCTests(TestCase):
         self.assertEqual(d0, d)
         self.assertEqual(k0, k)
 
-    def test_swaps(self):
+    def test_swaps_degenerate(self):
         """
         Tests that at least one swap is made in a multiple passes of the MCMC.
         Since certain swaps lead to zero change in the incidence list we cannot
@@ -65,7 +65,44 @@ class MCMCTests(TestCase):
 
         il_before = self.A.get_IL()
 
-        self.A.stub_labeled_MCMC(n_steps=10)
+        self.A.MCMC(n_steps=10, avoid_degeneracy=True)
+
+        il_after = self.A.get_IL()
+
+        diff = sum([x.nid!=y.nid for x,y in zip(il_before, il_after)])
+        
+        self.assertGreater(diff, 0)    
+
+    def test_degree_and_dimension_preserved_degenerate(self):
+        """
+        Ensure degree and dimension sequence is preserved at each step.
+
+        Note: Degenerate can result in a node being in two roles in one edge.
+        """
+
+        d0 = self.A.node_degrees(by_role=True)
+        k0 = self.A.edge_dimensions(by_role=True)
+        
+        self.A.MCMC(n_steps=1, avoid_degeneracy=False)
+
+        d = self.A.node_degrees(by_role=True)
+        k = self.A.edge_dimensions(by_role=True)
+
+        self.assertEqual(d0, d)
+        self.assertEqual(k0, k)
+
+    def test_swaps_degenerate(self):
+        """
+        Tests that at least one swap is made in a multiple passes of the MCMC.
+        Since certain swaps lead to zero change in the incidence list we cannot
+        test a single swap.
+
+        Note: Degenerate can result in a node being in two roles in one edge.
+        """
+
+        il_before = self.A.get_IL()
+
+        self.A.MCMC(n_steps=10, avoid_degeneracy=False)
 
         il_after = self.A.get_IL()
 
