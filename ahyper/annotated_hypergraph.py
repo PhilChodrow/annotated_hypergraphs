@@ -269,6 +269,27 @@ class AnnotatedHypergraph(object):
 
         return weighted_edges
 
+    def to_bipartite_graph(self, use_networkx=True):
+        """
+        Constructs a bipartitate representation of the annotated hypergraph.
+
+        Both nodes and edges occur as vertices and are linked according to incidence.
+
+        Input:
+            use_networkx (bool): If True, returns a NetworkX graph object (default True).
+
+        Output:
+            G (nx.Graph): The bipartite graph.
+        """
+
+        ebunch = [(e.nid, -e.eid-1, {'role' : e.role}) for e in self.get_IL()]
+
+        if use_networkx:             
+            G = nx.Graph()
+            G.add_edges_from(ebunch)
+            return G
+        else:
+            raise NotImplementedError("Currently only supporting NetworkX")
     
     def count_degeneracies(self):
         """Return the number of edges in which the same node appears multiple times"""
