@@ -57,19 +57,19 @@ def records_from_incidence_list(IL, role_fields):
     Construct list of records from node-edge incidence list.
     """
 
-    IL = sorted(IL, key = lambda x: x.eid, reverse = True)
+    IL = sorted(IL, key=lambda x: x.eid, reverse=True)
     chunked = [list(v) for eid, v in groupby(IL, lambda x: x.eid)]
 
     records = []
     for chunk in chunked:
         record = {role : [] for role in role_fields}
         record['eid'] = chunk[0].eid
-        record['date'] = chunk[0].meta['date'] # We need to accommodate other fields in the future
+        record['date'] = chunk[0].meta['date'] # TODO: We need to accommodate other fields in the future
         for line in chunk:
             record[line.role].append(line.nid)
         records.append(record)
     
-    return(records)
+    return sorted(records, key=lambda x: x['eid']) 
 
 def normalise_counters(counters):
     """Normalise a dictionary of counters inplace."""
