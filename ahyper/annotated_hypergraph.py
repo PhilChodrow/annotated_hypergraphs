@@ -1,6 +1,5 @@
 from .utils import *
 
-
 from collections import Counter, defaultdict
 from itertools import permutations
 from copy import deepcopy
@@ -15,13 +14,17 @@ class AnnotatedHypergraph(object):
     
     def __init__(self, IL, roles):
         """
+        Annotated Hypergraphs.
 
+        For construction use the class methods:
+            .from_records()
+            .from_incidence()
         """
+
         self.IL = IL
         self.roles = roles
-
-        self.IL.sort(key = lambda x: x.role)
         self.set_states()
+        self.sort(by='eid')
 
     @classmethod
     def from_records(cls, records, roles):
@@ -39,6 +42,9 @@ class AnnotatedHypergraph(object):
         Input:
             records [list]: A list of records (JSON-like)
             roles [list]: A list of role labels
+
+        Output:
+            AnnotatedHypergraph
         """
 
         # Assign edge ids if not already present
@@ -53,7 +59,25 @@ class AnnotatedHypergraph(object):
     @classmethod
     def from_incidence(cls, dataset, root='./data/', relabel_roles=False, add_metadata=False):
         """
+        Construct an annotated hypergraph from saved data.
+
+        Saved data should be of the form
+            root/dataset/incidence.csv
+            root/dataset/edges.csv
+            root/dataset/roles.csv
+
+        See examples in Github.
+
+        Input:
+            dataset (str): The folder name where the data is stored.
+            root (str): The file path to the dataset folder.
+            relabel_roles (bool): If True, roles are relabelled from integers to labels (default False).
+            add_metadata (bool): If True, edge metadata is added to the incidence list (default False).
+
+        Output:
+            AnnotatedHypergraph
         """
+
         incidence = pd.read_csv(root+dataset+'/incidence.csv')
         edges = pd.read_csv(root+dataset+'/edges.csv', index_col=0)
         incidence.columns = ['nid', 'eid', 'role']
@@ -77,35 +101,82 @@ class AnnotatedHypergraph(object):
         return cls([NodeEdgeIncidence(**row) for ix,row in incidence.iterrows()], roles)   
 
     def set_states(self):
+        """Sets the internal states from incidence list."""
         self.node_list = np.unique([e.nid for e in self.IL])
         self.edge_list = np.unique([e.eid for e in self.IL])
         self.n = len(self.node_list)
         self.m = len(self.edge_list)
         self.R = None
+        self.sort_key = None
         
-
     def get_node_list(self):
-        """"""
+        """Returns the node list."""
         return self.node_list
     
     def get_edge_list(self):
-        """"""
+        """Returns the edge list."""
         return self.edge_list
+
+    def _MCMC_no_role(self, avoid_degeneracy=True, n_steps=1, verbose=False):
+        """ Helper function for systematic methods. """        
+        return self.MCMC(n_steps=n_steps, verbose=verbose, role_labels=False)
+
+    def get_IL(self):
+        """Returns the sorted incidence list."""
+        return sorted(self.IL, key=lambda x: x.eid, reverse=True)
     
-    def MCMC(self, n_steps = 1, avoid_degeneracy = True, **kwargs):
-        if avoid_degeneracy:
-            alg = self.degeneracy_avoiding_MCMC
+    def get_records(self):
+        """Returns records representing the annotated hypergraph. """
+        return records_from_incidence_list(self.IL, role_fields=self.roles)
+
+    def sort(self, by='eid', reverse=False):
+        """
+        Sorts the incidence list.
+
+        Keeps a track of what key the incidence list is sorted by
+        and does not attempt to sort if already sorted.
+
+        Input:
+            by (str,list): Choice from ['nid','eid','role'], or a subset of. 
+            reverse (bool): If True, reverse the sorting.
+        """
+        if isinstance(by, str):
+            by = [by]
+
+        sort_key = '_'.join(by)
+
+        if self.sort_key == sort_key:
+            return None
         else:
-            alg = self.stub_labeled_MCMC
+            self.IL.sort(key=lambda x: [getattr(x, b) for b in by], reverse=reverse)
+
+    def MCMC(self, n_steps=1, avoid_degeneracy=True, **kwargs):
+        """
+        Performs iterations of the MCMC algorithm to perform node swaps in the
+        annotated hypergraph.
+
+        Input:
+            n_steps (int): The number of Monte Carlo steps (swaps) to take.
+            avoid_degeneracy (bool): If True, prevents an edge becoming degenerate,
+                                     i.e., containing the same node in multiple roles.
+            kwargs: Includes 'verbose' which prints out progress
+                    and 'role_labels' which, if True, preserves
+                    node role labels when switching.
+        """
+
+        if avoid_degeneracy:
+            alg = self._degeneracy_avoiding_MCMC
+        else:
+            alg = self._stub_labeled_MCMC
         
         alg(n_steps, **kwargs)
     
-    def stub_labeled_MCMC(self, n_steps = 1):
+    def _stub_labeled_MCMC(self, n_steps=1):
         """
         Can create degeneracies, probably deprecated
         """
         
-        self.IL.sort(key = lambda x: x.role)
+        self.sort(by='role')
         by_role = [list(v) for role, v in groupby(self.IL, lambda x: x.role)]
         
         # distribute steps over the role partition, using coupon-collector heuristic
@@ -119,21 +190,23 @@ class AnnotatedHypergraph(object):
         self.IL = [e for role in by_role for e in role]
     
 
-    def degeneracy_avoiding_MCMC(self, n_steps = 1, verbose = False, role_labels = True):
-        '''
+    def _degeneracy_avoiding_MCMC(self, n_steps=1, verbose=False, role_labels=True):
+        """
         Avoids creating edges in which the same node appears multiple times. 
         Some properties need checking, but should be equivalent to stub-matching conditioned on nondegeneracy. 
-        '''
+        """
         
-        # prepare: easier to work on a transformed data structure in which incidences are grouped into hyper edges
-        self.IL.sort(key = lambda e: (e.eid, e.role))
+        # TODO: easier to work on a transformed data structure in which incidences are grouped into hyper edges
+        # TODO: sorting will hit runtime quite a bit - easy first step in optimisation.
+
+        self.sort(by=['eid','role'])
         grouped = groupby(self.IL, lambda e: (e.eid))
         edges = {k: list(v) for k, v in grouped}
         
         k_rejected = 0
         N = 0
         
-        while(N < n_steps):
+        while (N < n_steps):
             
             # select two random hyperedges
             i, j = np.random.randint(1, self.m+1, 2)
@@ -149,7 +222,6 @@ class AnnotatedHypergraph(object):
                 continue
 
             # Construct the proposal swap 
-
             E0_prop = E0.copy()
             E0_prop[k] = NodeEdgeIncidence(E1[l].nid, E0[k].role, E0[k].eid, E0[k].meta)
 
@@ -168,48 +240,52 @@ class AnnotatedHypergraph(object):
                         
         # update self.IL
         self.IL = [e for E in edges for e in edges[E]]
-        self.IL.sort(key = lambda x: x.role)
             
         if verbose: 
             print(str(n_steps) + ' steps taken, ' + str(k_rejected) + ' steps rejected.')
-
-    def _degeneracy_avoiding_MCMC_no_role(self, n_steps=1, verbose=False):
-        """ Helper function for systematic methods. """        
-        return self.degeneracy_avoiding_MCMC(n_steps=n_steps, verbose=verbose, role_labels=False)
-
-    def get_IL(self):
-        """"""
-        return(sorted(self.IL, key = lambda x: x.eid, reverse = True))
     
-    def get_records(self):
-        """"""
-        return records_from_incidence_list(self.IL, role_fields = self.roles)
-    
-    def node_degrees(self, by_role = False):
-        """"""
-        self.IL.sort(key = lambda x: x.role)
+    def node_degrees(self, by_role=False):
+        """
+        Calculates the node degrees.
+
+        Input:
+            by_role (bool): If True, returns node degrees grouped by role (default False).
+        
+        Output:
+            node_degrees (dict): The node degrees.
+        """
+        
+        self.sort(by='role')
         if by_role:
             br = {role: list(v) for role, v in groupby(self.IL, lambda x: x.role)}
             DT = {role : Counter([e.nid for e in br[role]]) for role in self.roles}
             D = {k : {role : DT[role][k] for role in self.roles} for k in self.node_list}
-            return(D)
+            return D
             
         else:
             V = [e.nid for e in self.IL]
-            return(dict(Counter(V)))
+            return dict(Counter(V))
         
-    def edge_dimensions(self, by_role = False):
-        """"""
+    def edge_dimensions(self, by_role=False):
+        """
+        Calculates the edge dimensions.
+
+        Input:
+            by_role (bool): If True, returns edge dimensions grouped by role (default False).
+
+        Output:
+            edge_dimensions (dict): The edge dimensions.
+        """
         
-        self.IL.sort(key = lambda x: x.role)
+        self.sort(by='role')
         if by_role:
             br =  {role: list(v) for role, v in groupby(self.IL, lambda x: x.role)}
             DT = {role : Counter([e.eid for e in br[role]]) for role in self.roles}
             D = {k : {role : DT[role][k] for role in self.roles} for k in self.edge_list}
-            return(D)
+            return D
         else:
             E = [e.eid for e in self.IL]
-            return(Counter(E))
+            return dict(Counter(E))
 
 
     def assign_role_interaction_matrix(self, R=None):
@@ -269,23 +345,51 @@ class AnnotatedHypergraph(object):
 
         return weighted_edges
 
+    def to_bipartite_graph(self, use_networkx=True):
+        """
+        Constructs a bipartitate representation of the annotated hypergraph.
+
+        Both nodes and edges occur as vertices and are linked according to incidence.
+
+        Input:
+            use_networkx (bool): If True, returns a NetworkX graph object (default True).
+
+        Output:
+            G (nx.Graph): The bipartite graph.
+        """
+
+        ebunch = [(e.nid, -e.eid-1, {'role' : e.role}) for e in self.get_IL()]
+
+        if use_networkx:             
+            G = nx.Graph()
+            G.add_edges_from(ebunch)
+            return G
+        else:
+            raise NotImplementedError("Currently only supporting NetworkX")
     
     def count_degeneracies(self):
         """Return the number of edges in which the same node appears multiple times"""
-        self.IL.sort(key = lambda x: x.eid)
+
+        self.sort(by='eid')
         by_edges = [list(v) for eid, v in groupby(self.IL, lambda x: x.eid)]
         
         return(sum([check_degenerate(E) for E in by_edges]))
         
     
     def remove_degeneracies(self, precedence):
-        '''
+        """
         Removes entries from self.IL in order of precedence until each node appears only once in each edge.
+
         Roles with higher precedence are retained.  
-        Precedence: a dict of the form {role : p}, lower p -> higher precedence
         May be overaggressive in  node removal -- further tests necessary 
-        '''
+        
+        Input:
+            precedence (dict): A dictionary of the form {role : p}. Lower p -> higher precedence.
+        """
+        
         self.IL.sort(key = lambda x: (x.eid, x.nid, precedence[x.role]))
+        self.sort_key = 'custom'
+
         grouped = [list(v) for eid, v in groupby(self.IL, lambda x: x.eid)]
         
         IL_ = []
@@ -306,9 +410,10 @@ class AnnotatedHypergraph(object):
         self.relabel()
 
     def remove_singletons(self):
-        '''
+        """
         Removes entries from self.IL if the corresponding edge contains only one node. 
-        '''
+        """
+
         D = self.edge_dimensions()
         to_remove = []
         for e in self.IL:
@@ -322,6 +427,9 @@ class AnnotatedHypergraph(object):
         print('Removed '  + str(k_removed) + ' singletons.')
         
     def relabel(self):
+        """
+        TODO: Why does relabel_by_field return a value?
+        """
 
         def relabel_by_field(D, field):
             
@@ -333,7 +441,7 @@ class AnnotatedHypergraph(object):
                     old = e[field]
                     j += 1
                 e[field] = j
-            return(D)
+            return D
         
         D = relabel_by_field(self.IL, 'eid')
         D = relabel_by_field(self.IL, 'nid')
@@ -341,10 +449,10 @@ class AnnotatedHypergraph(object):
         self.set_states()
         
     def stub_matching(self):
-        '''
+        """
         Return a randomized version of self constructed according to the naive stub-matching algorithm. 
         Preserves node-role and edge-role matrices, but generally introduces degeneracies. 
-        '''
+        """
         
         dims = self.edge_dimensions(by_role = True)
         
@@ -365,17 +473,7 @@ class AnnotatedHypergraph(object):
         a.IL = IL_
         a.set_states()
         return(a)
-    
-    def bipartite_graph(self):
-        '''
-        return an nx.Graph() in which both nodes and edges occur as nodes, and are linked according to incidence. 
-        '''
-        ebunch = [(e.nid, -e.eid-1, {'role' : e.role}) for e in self.get_IL()]
-        G = nx.Graph()
-        G.add_edges_from(ebunch)
-        return(G)
-    
-    
+       
 
 def bipartite_edge_swap(e0, e1):
     """
@@ -404,9 +502,9 @@ def swap_step(il):
 
     
 def check_degenerate(E):
-    '''E is a set of node-edge incidences corresponding to a single edge'''
+    """E is a set of node-edge incidences corresponding to a single edge"""
     E_distinct = set([e.nid for e in E])
-    return(len(E_distinct) != len(E))
+    return (len(E_distinct) != len(E))
 
 
 
