@@ -116,7 +116,7 @@ class AnnotatedHypergraph(object):
 
     def _MCMC_no_role(self, avoid_degeneracy=True, n_steps=1, verbose=False):
         """ Helper function for systematic methods. """        
-        return self.MCMC(n_steps=n_steps, verbose=verbose, role_labels=False)
+        return self.MCMC(n_steps=n_steps, avoid_degeneracy=avoid_degeneracy, verbose=verbose, role_labels=False)
 
     def get_IL(self):
         """Returns the sorted incidence list."""
@@ -326,7 +326,7 @@ class AnnotatedHypergraph(object):
         else:
             self.R = np.ones(shape=(num_roles,num_roles))
 
-    def to_weighted_projection(self, use_networkx=False, as_matrix=False):
+    def to_weighted_projection(self, use_networkx=False, use_graphtool=False, as_matrix=False):
         """
         Projects an annotated hypergraph to a weighted, directed graph.
 
@@ -342,6 +342,8 @@ class AnnotatedHypergraph(object):
                                    The values are dictionaries of targets which in turn
                                    contain weights of interaction.
         """
+        if sum([use_networkx, use_graphtool, as_matrix]) > 1:
+            raise Exception("Only one output format must be specified.")
         
         weighted_edges = defaultdict(lambda: defaultdict(lambda: 0.0))
         role_map = {role:ix for ix,role in enumerate(self.roles)}
@@ -365,6 +367,41 @@ class AnnotatedHypergraph(object):
         if use_networkx:
             weighted_edges = {source:{target:{'weight':val} for target,val in values.items()} for source, values in weighted_edges.items()}
             G = nx.DiGraph(weighted_edges)
+            return G
+
+        if use_graphtool:
+            try:
+                import graph_tool as gt
+            except ImportError as e:
+                print("Graph-tool not installed")
+                return None
+                
+            G = gt.Graph(directed=True)
+            weights = G.new_edge_property('float')
+            node_labels = G.new_vertex_property('int')
+
+            vertices = {}
+
+            for source, edges in weighted_edges.items():
+                for target, weight in edges.items():
+
+                    s = vertices.get(source)
+                    if s is None:
+                        vertices[source] = G.add_vertex()
+                        s = vertices[source]
+                    t = vertices.get(target)
+                    if t is None:
+                        vertices[target] = G.add_vertex()
+                        t = vertices[target]
+                        
+                    e = G.add_edge(s, t)
+                    weights[e] = weight
+            
+            for node, v in vertices.items():
+                node_labels[v] = node
+
+            G.edge_properties['weights'] = weights
+            G.vertex_properties['node_labels'] = node_labels
             return G
 
         return weighted_edges

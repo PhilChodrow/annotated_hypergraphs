@@ -81,9 +81,15 @@ def node_role_participation(annotated_hypergraph, absolute_values=False):
         return densities
 
 def _degree_centrality(weighted_projection):
-    return nx.out_degree_centrality(weighted_projection)
+    if isinstance(weighted_projection, nx.DiGraph):
+        return nx.out_degree_centrality(weighted_projection)
+    else: # graphtool
+        G = weighted_projection
+        degrees = G.degree_property_map('out', weight=G.ep.weights)
+        degrees = {G.vp.node_labels[v]:degrees[v] for v in G.vertices()}
+        return degrees
 
-def degree_centrality(annotated_hypergraph):
+def degree_centrality(annotated_hypergraph, **kwargs):
     """
     Returns the weighted degree centrality for each node in an annotated hypergraph
     with a defined role-interaction matrix.
@@ -98,12 +104,19 @@ def degree_centrality(annotated_hypergraph):
         degrees (dict): A dictionary of {node:degree} pairs.
     """
 
-    weighted_projection = annotated_hypergraph.to_weighted_projection(use_networkx=True)
+    weighted_projection = annotated_hypergraph.to_weighted_projection(**kwargs)
     return _degree_centrality(weighted_projection)
 
 
 def _eigenvector_centrality(weighted_projection, **kwargs):
-    return nx.eigenvector_centrality(weighted_projection, **kwargs)
+    if isinstance(weighted_projection, nx.DiGraph):
+        return nx.eigenvector_centrality(weighted_projection, **kwargs)
+    else:
+        from graph_tool.centrality import eigenvector
+        G = weighted_projection
+        _, eigenv = eigenvector(G, weight=G.ep.weights)
+        ev = {G.vp.node_labels[v]:eigenv[v] for v in G.vertices()}
+        return ev
 
 def eigenvector_centrality(annotated_hypergraph, **kwargs):
     """
@@ -129,7 +142,14 @@ def eigenvector_centrality(annotated_hypergraph, **kwargs):
     
 
 def _pagerank_centrality(weighted_projection, **kwargs):
-    return nx.pagerank(weighted_projection, **kwargs)
+    if isinstance(weighted_projection, nx.DiGraph):
+        return nx.pagerank(weighted_projection, **kwargs)
+    else:
+        from graph_tool.centrality import pagerank
+        G = weighted_projection
+        pr = pagerank(G, weight=G.ep.weights)
+        pr = {G.vp.node_labels[v]:pr[v] for v in G.vertices()}
+        return pr
 
 def pagerank_centrality(annotated_hypergraph, **kwargs):
     """
@@ -155,7 +175,15 @@ def pagerank_centrality(annotated_hypergraph, **kwargs):
 
 
 def _connected_components(weighted_projection):
-    return nx.number_weakly_connected_components(weighted_projection)
+    if isinstance(weighted_projection, nx.DiGraph):
+        return nx.number_weakly_connected_components(weighted_projection)
+    else:
+        from graph_tool.topology import label_components
+        G = weighted_projection
+        G.set_directed(False)
+        _, comps = label_components(G)
+        G.set_directed(True)
+        return len(comps)
 
 def connected_components(annotated_hypergraph):
     """
