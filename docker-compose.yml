@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  notebook:
+    image: andym1080/annotated-hypergraph:latest
+    volumes:
+      - .:/annotated
+    ports:
+      - "8888:8888"
+      - "6006:6006"
+    user: user
+    working_dir: /annotated
