@@ -82,7 +82,10 @@ def node_role_participation(annotated_hypergraph, absolute_values=False):
 
 def _degree_centrality(weighted_projection):
     if isinstance(weighted_projection, nx.DiGraph):
-        return nx.out_degree_centrality(weighted_projection)
+        degrees = {node:weighted_projection.out_degree(node, weight='weight') for node in weighted_projection.nodes()}
+        return degrees
+    elif isinstance(weighted_projection, dict):
+        return NotImplementedError("Specify one of 'use_networkx' or 'use_graphtool'")
     else: # graphtool
         G = weighted_projection
         degrees = G.degree_property_map('out', weight=G.ep.weights)
@@ -305,7 +308,15 @@ def random_walk_pagerank(annotated_hypergraph,
     else:
         return d
 
-
+def _assortativity(annotated_hypergraph, n_samples, by_role=True, spearman=True):
+    """Helper function."""
+    assort = assortativity(annotated_hypergraph, n_samples, by_role=True, spearman=True)
+    assort_dict = {}
+    role_map = dict(annotated_hypergraph.role_map)
+    for ix, row in assort.iterrows():
+        key = f'{role_map[int(ix[0])]}_{role_map[int(ix[1])]}'
+        assort_dict[key] = row.deg_2
+    return assort_dict
     
 def assortativity(annotated_hypergraph, n_samples, by_role=True, spearman=True):
     """
@@ -349,8 +360,10 @@ def assortativity(annotated_hypergraph, n_samples, by_role=True, spearman=True):
     degs = A.node_degrees(by_role = by_role)
     
     # containers for the data generated in the loop
-    
-    max_len = max(len(role) for role in A.roles)
+    if isinstance(A.roles[0], int):
+        max_len = max(len(str(role)) for role in A.roles) 
+    else:
+        max_len = max(len(role) for role in A.roles)
     
     dtype = 'S' + str(max_len)
     
@@ -369,8 +382,9 @@ def assortativity(annotated_hypergraph, n_samples, by_role=True, spearman=True):
     for k in 2*np.arange(n_samples):
         
         # choose a random edge and two nodes on it. 
-        i = np.random.randint(1, A.m+1)
-        
+        # i = np.random.randint(1, A.m+1)
+        i = np.random.randint(0, A.m)        
+
         edge = edges[i]
         
         i_ = np.random.randint(len(edge))

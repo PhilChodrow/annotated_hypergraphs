@@ -57,9 +57,9 @@ class CentralityTests(TestCase):
     def test_degree_centrality(self):
         """ Test the degree centrality calculation. """
 
-        degrees = degree_centrality(self.A)
+        degrees = degree_centrality(self.A, use_networkx=True)
 
-        self.assertAlmostEqual(degrees[96], 0.3063063063063063)
+        self.assertAlmostEqual(degrees[96], 2237.0)
 
     def test_eigenvector_centrality(self):
         """ Test the eigenvector centrality calculation. """

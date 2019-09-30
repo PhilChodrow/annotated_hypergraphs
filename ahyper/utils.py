@@ -120,7 +120,9 @@ def entropy_value(func):
     Converts function output to a Pandas series and calculates the entropy.
     """
     def ent_value(args, **kwargs):
-        return entropy(pd.Series(func(args, **kwargs)))
+        values = pd.Series(func(args, **kwargs))
+        values = values/values.sum()
+        return entropy(values)
     return ent_value
 
 def sort_matrix(A, v):

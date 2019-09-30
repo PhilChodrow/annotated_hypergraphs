@@ -32,9 +32,19 @@ def data_features(annotated_hypergraph,
     
     for feature,f in features.items():
         if f['acts_on'] == 'annotated_hypergraph':
-            feature_store[feature] = f['func'](A, **f['kwargs'])
+            result = f['func'](A, **f['kwargs'])
+            if isinstance(result, dict):
+                for key, val in result.items():
+                    feature_store[f'{feature}_{key}'] = val
+            else:
+                feature_store[feature] = result 
         elif f['acts_on'] == 'weighted_projection':
-            feature_store[feature] = f['func'](W, **f['kwargs'])
+            result = f['func'](W, **f['kwargs'])
+            if isinstance(result, dict):
+                for key, val in result.items():
+                    feature_store[f'{feature}_{key}'] = val
+            else:
+                feature_store[feature] = result 
             
     return feature_store
 
@@ -92,7 +102,8 @@ def shuffled_ensemble_features(annotated_hypergraph,
     for ix in range(num_shuffles):
         
         # Logging
-        if verbose and (ix % (num_shuffles//20)) == 0: print(str(100*ix/num_shuffles)+'%', end='\r', flush=True)
+        divisor = num_shuffles if num_shuffles < 20 else 20
+        if verbose and (ix % (num_shuffles//divisor)) == 0: print(str(100*ix/num_shuffles)+'%', end='\r', flush=True)
                     
         shuffle(n_steps=int(shuffle_fraction*num_stubs))
         
@@ -102,9 +113,19 @@ def shuffled_ensemble_features(annotated_hypergraph,
         for feature,f in features.items():
             try:
                 if f['acts_on'] == 'annotated_hypergraph':
-                    feature_store[ix][feature] = f['func'](A, **f['kwargs'])
+                    result = f['func'](A, **f['kwargs'])
+                    if isinstance(result, dict):
+                        for key, val in result.items():
+                            feature_store[ix][f'{feature}_{key}'] = val
+                    else:
+                        feature_store[ix][feature] = result 
                 elif f['acts_on'] == 'weighted_projection':
-                    feature_store[ix][feature] = f['func'](W, **f['kwargs'])
+                    result = f['func'](W, **f['kwargs'])
+                    if isinstance(result, dict):
+                        for key, val in result.items():
+                            feature_store[ix][f'{feature}_{key}'] = val
+                    else:
+                        feature_store[ix][feature] = result 
             except: # I would use BaseException as e but nx does seem to inherit.
                 if fail_hard: 
                     raise e

@@ -12,7 +12,7 @@ import networkx as nx
 
 class AnnotatedHypergraph(object):
     
-    def __init__(self, IL, roles):
+    def __init__(self, IL, roles, **kwargs):
         """
         Annotated Hypergraphs.
 
@@ -23,6 +23,10 @@ class AnnotatedHypergraph(object):
 
         self.IL = IL
         self.roles = roles
+
+        for key, val in kwargs.items():
+            setattr(self, key, val)
+
         self.set_states()
         self.sort(by='eid')
 
@@ -81,13 +85,13 @@ class AnnotatedHypergraph(object):
         incidence = pd.read_csv(root+dataset+'/incidence.csv')
         edges = pd.read_csv(root+dataset+'/edges.csv', index_col=0)
         incidence.columns = ['nid', 'eid', 'role']
-        roles = pd.read_csv(root+dataset+'/roles.csv', index_col=0, header=None, squeeze=True)
+        role_map = pd.read_csv(root+dataset+'/roles.csv', index_col=0, header=None, squeeze=True)
 
         if relabel_roles:
-            incidence['role'] = incidence.role.apply(lambda x: roles[x])
-            roles = list(roles.values)
+            incidence['role'] = incidence.role.apply(lambda x: role_map[x])
+            roles = list(role_map.values)
         else:
-            roles = list(range(len(roles)))
+            roles = list(range(len(role_map)))
 
         if add_metadata:
             metamapper = {ix:d for ix, d in zip(edges.index, edges.to_dict(orient='records'))}
@@ -95,7 +99,7 @@ class AnnotatedHypergraph(object):
         else:
             incidence['meta'] = None
 
-        return cls([NodeEdgeIncidence(**row) for ix,row in incidence.iterrows()], roles)   
+        return cls([NodeEdgeIncidence(**row) for ix,row in incidence.iterrows()], roles, role_map=role_map)   
 
     def set_states(self):
         """Sets the internal states from incidence list."""
