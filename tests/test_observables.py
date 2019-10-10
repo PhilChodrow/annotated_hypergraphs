@@ -1,5 +1,5 @@
 from unittest import TestCase, skip
-from data_loader import DATA, ROLE_FIELDS
+from data_loader import DATA, SMALL_TEST_DATA, ROLE_FIELDS, Counter
 
 from ahyper.annotated_hypergraph import AnnotatedHypergraph
 from ahyper.observables import (local_role_density, degree_centrality, 
@@ -7,16 +7,18 @@ from ahyper.observables import (local_role_density, degree_centrality,
                                 connected_components, random_walk, random_walk_pagerank,
                                 assortativity)
 
-class DensityTests(TestCase):
+class RoleDensityTests(TestCase):
     """
     Basic tests for the calculation of role densities.
     """
 
     def setUp(self):
         self.A = AnnotatedHypergraph.from_records(DATA, ROLE_FIELDS)
+        self.B = AnnotatedHypergraph.from_records(SMALL_TEST_DATA, ROLE_FIELDS)
 
     def tearDown(self):
         self.A = None
+        self.B = None
 
     def test_counts(self):
         """
@@ -43,6 +45,31 @@ class DensityTests(TestCase):
 
         for key, entry in density_focus.items():
             self.assertNotEqual(sum(entry.values()), sum(density_no_focus[key].values()))
+
+    def test_example(self):
+        """
+        Test a particular example to ensure it is calculating correct values.
+        """
+        lrd = local_role_density(self.B, absolute_values=True, include_focus=False)
+
+        self.assertEqual(
+            lrd, 
+            {0: Counter({'to': 3, 'from': 0}),
+             1: Counter({'from': 1, 'to': 5}),
+             2: Counter({'from': 1, 'to': 2}),
+             3: Counter({'from': 1, 'to': 2}),
+             4: Counter({'from': 1, 'to': 2}),
+             5: Counter({'from': 1, 'to': 2}),
+             6: Counter({'from': 1, 'to': 2})}
+            )
+
+    @skip
+    def test_alternate_method(self):
+        """
+        Calculate the local role density in an alternate fashion and 
+        compare results.
+        """
+        pass
 
 class CentralityTests(TestCase):
     """
@@ -82,6 +109,7 @@ class CentralityTests(TestCase):
 
         self.assertEqual(components, 3)
 
+
 class RandomWalkTests(TestCase):
     """
     Basic tests for methods including random walks.
@@ -92,6 +120,9 @@ class RandomWalkTests(TestCase):
     def tearDown(self):
         self.A = None
 
+
+    # Skipping for now as non-vital.
+    @skip
     def test_random_walk(self):
         """Test random walk method. """
         G = self.A.to_bipartite_graph()
@@ -100,6 +131,7 @@ class RandomWalkTests(TestCase):
                          alpha=0.1,
                          nonbacktracking=False)
 
+    @skip
     def test_pagerank(self):
         """ Test random walk PageRank. """
         pagerank = random_walk_pagerank(self.A,
@@ -109,6 +141,7 @@ class RandomWalkTests(TestCase):
                                         alpha_2=0.2,
                                         return_path=False)
 
+    @skip
     def test_sampled_assortativity(self):
         """Test sampled assortativity. """
         assort = assortativity(self.A,
