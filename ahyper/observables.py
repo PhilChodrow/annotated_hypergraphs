@@ -13,7 +13,7 @@ from scipy.linalg import eigh
 
 
 def local_role_density(
-    annotated_hypergraph, include_focus=False, absolute_values=False
+    annotated_hypergraph, include_focus=False, absolute_values=False, as_array=False
 ):
     """
     Calculates the density of each role within a 1-step neighbourhood
@@ -24,6 +24,7 @@ def local_role_density(
         include_focus [Bool]: If True, includes the roles of the focal node
                               in th calculation.
         absolute_values [Bool]: If True, returns role counts rather than densities.
+        as_array [Bool]: If True, return an array rather than a Counter. 
     Returns:
         role_densities []: An array of dimension (# nodes x # roles) 
                            describing the density of each role.
@@ -54,22 +55,23 @@ def local_role_density(
     keys = set(chain.from_iterable(densities.values()))
     for item in densities.values():
         item.update({key: 0 for key in keys if key not in item})
-
-    if absolute_values:
-        return densities
-
-    else:
+    
+    if not absolute_values: 
         normalise_counters(densities)
-        return densities
+    
+    if as_array:
+        densities = to_matrix(densities, A)
+        
+    return(densities)
 
-
-def node_role_participation(annotated_hypergraph, absolute_values=False):
+def node_role_participation(annotated_hypergraph, absolute_values=False, as_array=False):
     """
     Calculates the proportion of instances where each node is in each role.
 
     Input:
         annotated_hypergraph [AnnotatedHypergraph]: An annotated hypergraph.
         absolute_values [Bool]: If True, returns role counts rather than densities.
+        as_array [Bool]: If True, return an array rather than a Counter. 
     Returns:
         role_densities []: An array of dimension (# nodes x # roles) 
                            describing the participation of each role.
@@ -88,12 +90,13 @@ def node_role_participation(annotated_hypergraph, absolute_values=False):
     for item in densities.values():
         item.update({key: 0 for key in keys if key not in item})
 
-    if absolute_values:
-        return densities
-
-    else:
+    if not absolute_values: 
         normalise_counters(densities)
-        return densities
+    
+    if as_array:
+        densities = to_matrix(densities, A)
+        
+    return(densities)
 
 
 def _degree_centrality(weighted_projection):
@@ -577,3 +580,15 @@ def MI(X, Y, normalize=False, return_joint=False):
         return (out, joint)
     else:
         return out
+
+def to_matrix(C, A):
+    '''
+        Convert a counter, such as that returned by local_role_densities(), to a matrix in which each column corresponds to a role of A. 
+    '''
+    M = np.zeros((len(C), len(A.roles)))
+
+    k = list(C.keys())
+    for i in range(len(k)):
+        for j in range(len(A.roles)):
+            M[k[i], j] = C[i][A.roles[j]]
+    return(M)
