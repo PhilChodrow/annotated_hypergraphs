@@ -12,9 +12,13 @@ import pandas as pd
 from scipy.linalg import eigh
 
 
+<<<<<<< Updated upstream
 def local_role_density(
     annotated_hypergraph, include_focus=False, absolute_values=False
 ):
+=======
+def local_role_density(annotated_hypergraph, include_focus=False, absolute_values=False, as_matrix = False):
+>>>>>>> Stashed changes
     """
     Calculates the density of each role within a 1-step neighbourhood
     of a node, for all nodes.
@@ -53,17 +57,35 @@ def local_role_density(
 
     keys = set(chain.from_iterable(densities.values()))
     for item in densities.values():
+<<<<<<< Updated upstream
         item.update({key: 0 for key in keys if key not in item})
 
     if absolute_values:
         return densities
 
     else:
+=======
+        item.update({key:0 for key in keys if key not in item})
+    
+    if not absolute_values:
+>>>>>>> Stashed changes
         normalise_counters(densities)
-        return densities
+        
+    if as_matrix:
+        b = np.zeros((A.n, len(A.roles)))
+        for i in A.node_list:
+            for j in range(len(A.roles)):
+                b[i,j] = densities[i][A.roles[j]]
+        return(b)
+    return densities
+    
 
+<<<<<<< Updated upstream
 
 def node_role_participation(annotated_hypergraph, absolute_values=False):
+=======
+def node_role_participation(annotated_hypergraph, absolute_values=False, as_matrix = False):
+>>>>>>> Stashed changes
     """
     Calculates the proportion of instances where each node is in each role.
 
@@ -88,12 +110,23 @@ def node_role_participation(annotated_hypergraph, absolute_values=False):
     for item in densities.values():
         item.update({key: 0 for key in keys if key not in item})
 
+<<<<<<< Updated upstream
     if absolute_values:
         return densities
 
     else:
+=======
+    if not absolute_values:
+>>>>>>> Stashed changes
         normalise_counters(densities)
-        return densities
+
+    if as_matrix:
+        b = np.zeros((A.n, len(A.roles)))
+        for i in A.node_list:
+            for j in range(len(A.roles)):
+                b[i,j] = densities[i][A.roles[j]]
+        return(b)
+    return densities
 
 
 def _degree_centrality(weighted_projection):

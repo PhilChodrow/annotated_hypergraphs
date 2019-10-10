@@ -223,9 +223,10 @@ class AnnotatedHypergraph(object):
         while N < n_steps:
 
             # select two random hyperedges
-            i, j = np.random.randint(0, self.m, 2)
-            E0, E1 = edges[i], edges[j]
 
+            i, j = np.random.randint(1, self.m+1, 2)
+            E0, E1 = edges[i], edges[j] 
+            
             # select a random node-edge incidence from each
             k = np.random.randint(len(E0))
             l = np.random.randint(len(E1))
@@ -597,8 +598,26 @@ class AnnotatedHypergraph(object):
         if symmetrize:
             B = (B.T + B) / 2
         return B
+    
+    def estimate_local_role_densities(self, normalize = True):
+        '''
+        returns a matrix in which each row gives the estimated local role density for each node. 
+        estimates are computed via a mean-field approximation
+        '''
+        K = self.edge_dimensions(by_role = True, as_matrix = True)
+        M = np.zeros((len(self.roles), len(self.roles)))
 
-
+        D = self.node_degrees(by_role = True, as_matrix=True)
+        for i in range(len(self.roles)):
+            k = K[K[:,i] > 0,:]
+            M[i,:] = k.mean(axis = 0)
+            
+        C = np.dot(D, M) - D
+        
+        if normalize: 
+            C = C / C.sum(axis = 1)[:,np.newaxis]
+        return(C)
+    
 def bipartite_edge_swap(e0, e1):
     """
     Creates two new swapped edges by permuting the node ids.
