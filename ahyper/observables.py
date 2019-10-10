@@ -166,7 +166,7 @@ def eigenvector_centrality(annotated_hypergraph, **kwargs):
     """
     weighted_projection = annotated_hypergraph.to_weighted_projection(use_networkx=True)
 
-    return _eigenvector_centrality(weighted_projection)
+    return _eigenvector_centrality(weighted_projection, **kwargs)
 
 
 def _pagerank_centrality(weighted_projection, **kwargs):
