@@ -3,6 +3,7 @@ from data_loader import DATA, ROLE_FIELDS
 
 from ahyper.utils import *
 
+
 class UtilTests(TestCase):
     """
     """
@@ -18,8 +19,8 @@ class UtilTests(TestCase):
         Ensure that records can records can be reversibly
         transformed into an incidence list.
         """
-        
+
         il = incidence_list_from_records(DATA, ROLE_FIELDS)
         records = records_from_incidence_list(il, ROLE_FIELDS)
 
-        self.assertEqual(DATA,records)
+        self.assertEqual(DATA, records)

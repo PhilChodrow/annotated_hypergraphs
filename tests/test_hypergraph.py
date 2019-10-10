@@ -5,6 +5,7 @@ from data_loader import DATA, ROLE_FIELDS
 
 from ahyper.annotated_hypergraph import AnnotatedHypergraph
 
+
 class ConstructionTests(TestCase):
     """
     Basic tests for the construction of Annotated Hypergraphs.
@@ -14,18 +15,18 @@ class ConstructionTests(TestCase):
         """
         Test building from records.
         """
-    
+
         A = AnnotatedHypergraph.from_records(DATA, ROLE_FIELDS)
 
     def test_incidence_constructor(self):
         """
         Test building from incidence data.
         """
-    
-        A = AnnotatedHypergraph.from_incidence(dataset='enron', 
-                                               root='./data/',
-                                               relabel_roles=True,
-                                               add_metadata=True)
+
+        A = AnnotatedHypergraph.from_incidence(
+            dataset="enron", root="./data/", relabel_roles=True, add_metadata=True
+        )
+
 
 class MCMCTests(TestCase):
     """
@@ -45,7 +46,7 @@ class MCMCTests(TestCase):
 
         d0 = self.A.node_degrees(by_role=True)
         k0 = self.A.edge_dimensions(by_role=True)
-        
+
         self.A.MCMC(n_steps=1, avoid_degeneracy=True)
 
         d = self.A.node_degrees(by_role=True)
@@ -69,9 +70,9 @@ class MCMCTests(TestCase):
 
         il_after = self.A.get_IL()
 
-        diff = sum([x.nid!=y.nid for x,y in zip(il_before, il_after)])
-        
-        self.assertGreater(diff, 0)    
+        diff = sum([x.nid != y.nid for x, y in zip(il_before, il_after)])
+
+        self.assertGreater(diff, 0)
 
     def test_degree_and_dimension_preserved_degenerate(self):
         """
@@ -82,7 +83,7 @@ class MCMCTests(TestCase):
 
         d0 = self.A.node_degrees(by_role=True)
         k0 = self.A.edge_dimensions(by_role=True)
-        
+
         self.A.MCMC(n_steps=1, avoid_degeneracy=False)
 
         d = self.A.node_degrees(by_role=True)
@@ -106,9 +107,10 @@ class MCMCTests(TestCase):
 
         il_after = self.A.get_IL()
 
-        diff = sum([x.nid!=y.nid for x,y in zip(il_before, il_after)])
-        
+        diff = sum([x.nid != y.nid for x, y in zip(il_before, il_after)])
+
         self.assertGreater(diff, 0)
+
 
 class ConversionTests(TestCase):
     """
@@ -125,7 +127,7 @@ class ConversionTests(TestCase):
         """Test projection to a weighted directed graph."""
 
         weighted_edges = self.A.to_weighted_projection()
-        
+
         # One particular example
         self.assertEqual(weighted_edges[0][6], 8.0)
 
@@ -134,10 +136,10 @@ class ConversionTests(TestCase):
         Test projection to a weighted directed graph, using a custom
         role-interaction matrix, R.
         """
-        R = 2*np.ones((len(ROLE_FIELDS), len(ROLE_FIELDS)))
+        R = 2 * np.ones((len(ROLE_FIELDS), len(ROLE_FIELDS)))
         self.A.assign_role_interaction_matrix(R)
         weighted_edges = self.A.to_weighted_projection()
-        
+
         # One particular example
         self.assertEqual(weighted_edges[0][6], 16.0)
 
@@ -146,5 +148,4 @@ class ConversionTests(TestCase):
 
         G = self.A.to_bipartite_graph()
 
-        self.assertEqual(len(G.nodes()), self.A.n+self.A.m)
-        
+        self.assertEqual(len(G.nodes()), self.A.n + self.A.m)

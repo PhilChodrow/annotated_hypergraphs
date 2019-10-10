@@ -12,7 +12,9 @@ import pandas as pd
 from scipy.linalg import eigh
 
 
-def local_role_density(annotated_hypergraph, include_focus=False, absolute_values=False):
+def local_role_density(
+    annotated_hypergraph, include_focus=False, absolute_values=False
+):
     """
     Calculates the density of each role within a 1-step neighbourhood
     of a node, for all nodes.
@@ -31,25 +33,35 @@ def local_role_density(annotated_hypergraph, include_focus=False, absolute_value
     def get_counts(group):
         return Counter([x.role for x in group])
 
-    by_edge = {eid:get_counts(v) for eid, v in groupby(sorted(A.IL, key=lambda x: x.eid, reverse=True), lambda x: x.eid)}
+    by_edge = {
+        eid: get_counts(v)
+        for eid, v in groupby(
+            sorted(A.IL, key=lambda x: x.eid, reverse=True), lambda x: x.eid
+        )
+    }
 
     densities = {}
     for incidence in A.IL:
-        densities[incidence.nid] = densities.get(incidence.nid, Counter()) + by_edge[incidence.eid]
-        
+        densities[incidence.nid] = (
+            densities.get(incidence.nid, Counter()) + by_edge[incidence.eid]
+        )
+
         if not include_focus:
-            densities[incidence.nid] = densities.get(incidence.nid, Counter()) - Counter([incidence.role])
+            densities[incidence.nid] = densities.get(
+                incidence.nid, Counter()
+            ) - Counter([incidence.role])
 
     keys = set(chain.from_iterable(densities.values()))
     for item in densities.values():
-        item.update({key:0 for key in keys if key not in item})
+        item.update({key: 0 for key in keys if key not in item})
 
     if absolute_values:
         return densities
-    
+
     else:
         normalise_counters(densities)
         return densities
+
 
 def node_role_participation(annotated_hypergraph, absolute_values=False):
     """
@@ -67,30 +79,38 @@ def node_role_participation(annotated_hypergraph, absolute_values=False):
     def get_counts(group):
         return Counter([x.role for x in group])
 
-    densities = {nid:get_counts(v) for nid, v in groupby(sorted(A.IL, key=lambda x: x.nid), lambda x: x.nid)}
+    densities = {
+        nid: get_counts(v)
+        for nid, v in groupby(sorted(A.IL, key=lambda x: x.nid), lambda x: x.nid)
+    }
 
     keys = set(chain.from_iterable(densities.values()))
     for item in densities.values():
-        item.update({key:0 for key in keys if key not in item})
+        item.update({key: 0 for key in keys if key not in item})
 
     if absolute_values:
         return densities
-    
+
     else:
         normalise_counters(densities)
         return densities
 
+
 def _degree_centrality(weighted_projection):
     if isinstance(weighted_projection, nx.DiGraph):
-        degrees = {node:weighted_projection.out_degree(node, weight='weight') for node in weighted_projection.nodes()}
+        degrees = {
+            node: weighted_projection.out_degree(node, weight="weight")
+            for node in weighted_projection.nodes()
+        }
         return degrees
     elif isinstance(weighted_projection, dict):
         return NotImplementedError("Specify one of 'use_networkx' or 'use_graphtool'")
-    else: # graphtool
+    else:  # graphtool
         G = weighted_projection
-        degrees = G.degree_property_map('out', weight=G.ep.weights)
-        degrees = {G.vp.node_labels[v]:degrees[v] for v in G.vertices()}
+        degrees = G.degree_property_map("out", weight=G.ep.weights)
+        degrees = {G.vp.node_labels[v]: degrees[v] for v in G.vertices()}
         return degrees
+
 
 def degree_centrality(annotated_hypergraph, **kwargs):
     """
@@ -116,10 +136,12 @@ def _eigenvector_centrality(weighted_projection, **kwargs):
         return nx.eigenvector_centrality(weighted_projection, **kwargs)
     else:
         from graph_tool.centrality import eigenvector
+
         G = weighted_projection
         _, eigenv = eigenvector(G, weight=G.ep.weights)
-        ev = {G.vp.node_labels[v]:eigenv[v] for v in G.vertices()}
+        ev = {G.vp.node_labels[v]: eigenv[v] for v in G.vertices()}
         return ev
+
 
 def eigenvector_centrality(annotated_hypergraph, **kwargs):
     """
@@ -140,19 +162,21 @@ def eigenvector_centrality(annotated_hypergraph, **kwargs):
         eigenvector (dict): A dictionary of {node:eigenvector_centrality} pairs.
     """
     weighted_projection = annotated_hypergraph.to_weighted_projection(use_networkx=True)
-    
+
     return _eigenvector_centrality(weighted_projection)
-    
+
 
 def _pagerank_centrality(weighted_projection, **kwargs):
     if isinstance(weighted_projection, nx.DiGraph):
         return nx.pagerank(weighted_projection, **kwargs)
     else:
         from graph_tool.centrality import pagerank
+
         G = weighted_projection
         pr = pagerank(G, weight=G.ep.weights)
-        pr = {G.vp.node_labels[v]:pr[v] for v in G.vertices()}
+        pr = {G.vp.node_labels[v]: pr[v] for v in G.vertices()}
         return pr
+
 
 def pagerank_centrality(annotated_hypergraph, **kwargs):
     """
@@ -182,11 +206,13 @@ def _connected_components(weighted_projection):
         return nx.number_weakly_connected_components(weighted_projection)
     else:
         from graph_tool.topology import label_components
+
         G = weighted_projection
         G.set_directed(False)
         _, comps = label_components(G)
         G.set_directed(True)
         return len(comps)
+
 
 def connected_components(annotated_hypergraph):
     """
@@ -204,14 +230,12 @@ def connected_components(annotated_hypergraph):
 
     weighted_projection = annotated_hypergraph.to_weighted_projection(use_networkx=True)
 
-    return _connected_components(weighted_projection)   
+    return _connected_components(weighted_projection)
 
-def random_walk(G, 
-                n_steps, 
-                alpha=0, 
-                nonbacktracking=False,
-                alpha_ve=None, 
-                alpha_ev=None):
+
+def random_walk(
+    G, n_steps, alpha=0, nonbacktracking=False, alpha_ve=None, alpha_ev=None
+):
     """
     Conduct a random walk on a network G, optionally with teleportation parameter alpha and nonbacktracking.
 
@@ -230,48 +254,50 @@ def random_walk(G,
 
     TODO: Check this works (test) and make it clear differences between alphas.
     """
-    
+
     V = np.zeros(n_steps)
 
     nodes = np.array(list(G.nodes()))
     nodes = nodes[nodes >= 0]
     n = len(nodes)
     v = np.random.choice(nodes)
-    
-    # v2 eventually holds where we went last time. 
-    v2 = v 
-        
+
+    # v2 eventually holds where we went last time.
+    v2 = v
+
     for i in range(n_steps):
         N = G[v]
         v_ = np.random.choice(list(N))
         if nonbacktracking:
             while v_ == v2:
                 v_ = np.random.choice(list(N))
-            
-        role = G[v][v_]['role']
+
+        role = G[v][v_]["role"]
 
         if v < 0:
             alpha = alpha_ev
         else:
             alpha = alpha_ve
 
-        if np.random.rand() < alpha[role]: 
+        if np.random.rand() < alpha[role]:
             i_ = np.random.randint(n)
             v_ = nodes[i_]
-
 
         v2 = v
         v = v_
         V[i] = v
-    
+
     return V
 
-def random_walk_pagerank(annotated_hypergraph, 
-                         n_steps, 
-                         nonbacktracking=False,
-                         alpha_1=None,
-                         alpha_2=None,
-                         return_path=False):
+
+def random_walk_pagerank(
+    annotated_hypergraph,
+    n_steps,
+    nonbacktracking=False,
+    alpha_1=None,
+    alpha_2=None,
+    return_path=False,
+):
     """
     Calculate the random walk PageRank for each node in the network
     by sampling.
@@ -288,25 +314,27 @@ def random_walk_pagerank(annotated_hypergraph,
         pagerank (dict): A dictionary of node:pagerank pairs.
         V (np.array) [optional]: The random walk trajectory. 
 
-    """    
-        
+    """
+
     A = annotated_hypergraph
 
     G = A.to_bipartite_graph()
-    
-    V = random_walk(G, n_steps, nonbacktracking=nonbacktracking, 
-                    alpha_ve=alpha_1, alpha_ev=alpha_2) 
-                    
+
+    V = random_walk(
+        G, n_steps, nonbacktracking=nonbacktracking, alpha_ve=alpha_1, alpha_ev=alpha_2
+    )
+
     counts = np.unique(V, return_counts=True)
     ix = counts[0] >= 0
     v = counts[1][ix]
     v = v / v.sum()
     labels = counts[0][ix]
     d = {labels[i]: v[i] for i in range(len(v))}
-    if return_path: 
-        return d,V
+    if return_path:
+        return d, V
     else:
         return d
+
 
 def _assortativity(annotated_hypergraph, n_samples, by_role=True, spearman=True):
     """Helper function."""
@@ -314,10 +342,11 @@ def _assortativity(annotated_hypergraph, n_samples, by_role=True, spearman=True)
     assort_dict = {}
     role_map = dict(annotated_hypergraph.role_map)
     for ix, row in assort.iterrows():
-        key = f'{role_map[int(ix[0])]}_{role_map[int(ix[1])]}'
+        key = f"{role_map[int(ix[0])]}_{role_map[int(ix[1])]}"
         assort_dict[key] = row.deg_2
     return assort_dict
-    
+
+
 def assortativity(annotated_hypergraph, n_samples, by_role=True, spearman=True):
     """
     Return a stochastic approximation of the assortativity between nodes, optionally by roles. 
@@ -338,203 +367,213 @@ def assortativity(annotated_hypergraph, n_samples, by_role=True, spearman=True):
     """
 
     A = annotated_hypergraph
-    # first, construct a lookup giving the number of edges incident to each pair of nodes, by role if specified. 
+    # first, construct a lookup giving the number of edges incident to each pair of nodes, by role if specified.
     def discount_lookup(role_1, role_2, by_role=by_role):
 
         weighted_edges = defaultdict(lambda: defaultdict(lambda: 0.0))
         for eid, edge in groupby(A.get_IL(), lambda x: x.eid):
-                edge = list(edge)
-                for a,b in combinations(edge, 2):
-                    if by_role:
-                        if (a.role == role_1) and (b.role == role_2) or (a.role == role_2) and (b.role == role_1):
-                            weighted_edges[a.nid][b.nid] += 1
-                    else:
+            edge = list(edge)
+            for a, b in combinations(edge, 2):
+                if by_role:
+                    if (
+                        (a.role == role_1)
+                        and (b.role == role_2)
+                        or (a.role == role_2)
+                        and (b.role == role_1)
+                    ):
                         weighted_edges[a.nid][b.nid] += 1
+                else:
+                    weighted_edges[a.nid][b.nid] += 1
 
-        return(weighted_edges)
-    
-    D = {(role_1, role_2) : discount_lookup(role_1, role_2) for role_1, role_2 in permutations(A.roles, 2)}
+        return weighted_edges
+
+    D = {
+        (role_1, role_2): discount_lookup(role_1, role_2)
+        for role_1, role_2 in permutations(A.roles, 2)
+    }
     D = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: 0.0)), D)
-    
-    # next, construct the degree lookup, again by role if specified. 
-    degs = A.node_degrees(by_role = by_role)
-    
+
+    # next, construct the degree lookup, again by role if specified.
+    degs = A.node_degrees(by_role=by_role)
+
     # containers for the data generated in the loop
     if isinstance(A.roles[0], int):
-        max_len = max(len(str(role)) for role in A.roles) 
+        max_len = max(len(str(role)) for role in A.roles)
     else:
         max_len = max(len(role) for role in A.roles)
-    
-    dtype = 'S' + str(max_len)
-    
-    role_1 = np.empty(2*n_samples, dtype=dtype)
-    role_2 = np.empty(2*n_samples, dtype=dtype)
-    deg_1  = np.zeros(2*n_samples)
-    deg_2  = np.zeros(2*n_samples)
-    
-    # generate a dict which for each eid gives the list of NodeEdgeIncidences in that edge. 
+
+    dtype = "S" + str(max_len)
+
+    role_1 = np.empty(2 * n_samples, dtype=dtype)
+    role_2 = np.empty(2 * n_samples, dtype=dtype)
+    deg_1 = np.zeros(2 * n_samples)
+    deg_2 = np.zeros(2 * n_samples)
+
+    # generate a dict which for each eid gives the list of NodeEdgeIncidences in that edge.
     IL = A.get_IL()
-    IL.sort(key = lambda e: (e.eid, e.role))
+    IL.sort(key=lambda e: (e.eid, e.role))
     edges = groupby(IL, lambda e: (e.eid))
     edges = {k: list(v) for k, v in edges}
-    
+
     # main loop
-    for k in 2*np.arange(n_samples):
-        
-        # choose a random edge and two nodes on it. 
+    for k in 2 * np.arange(n_samples):
+
+        # choose a random edge and two nodes on it.
         # i = np.random.randint(1, A.m+1)
-        i = np.random.randint(0, A.m)        
+        i = np.random.randint(0, A.m)
 
         edge = edges[i]
-        
+
         i_ = np.random.randint(len(edge))
         j_ = np.random.randint(len(edge))
 
         while i_ == j_:
             i_ = np.random.randint(len(edge))
             j_ = np.random.randint(len(edge))
-        
+
         u = edges[i][i_].nid
         v = edges[i][j_].nid
 
         u_role = edges[i][i_].role
         v_role = edges[i][j_].role
-        
+
         # compute the discount -- this is the number of edges between u and v themselves.
         discount = D[(u_role, v_role)][u][v]
-        
+
         role_1[k] = u_role
         role_2[k] = v_role
-        role_1[k+1] = v_role
-        role_2[k+1] = u_role
-        
+        role_1[k + 1] = v_role
+        role_2[k + 1] = u_role
+
         if by_role:
             deg_1[k] = degs[u][u_role] - discount
             deg_2[k] = degs[v][v_role] - discount
-            
-            deg_1[k+1] = degs[u][u_role] - discount
-            deg_2[k+1] = degs[v][v_role] - discount
+
+            deg_1[k + 1] = degs[u][u_role] - discount
+            deg_2[k + 1] = degs[v][v_role] - discount
         else:
-            deg_1[k]    = degs[u] - discount
-            deg_2[k]   = degs[v] - discount
-            deg_1[k+1] = degs[u] - discount
-            deg_2[k+1] = degs[v] - discount
-    
-    # construct a DataFrame with the results. 
-    
-    role_1 = role_1.astype('U' + str(max_len))
-    role_2 = role_2.astype('U' + str(max_len))
-    
-    df = pd.DataFrame({'role_1' : role_1, 'role_2' : role_2, 'deg_1' : deg_1, 'deg_2' : deg_2})
-    
-    df = df.astype({'deg_1': 'int32', 'deg_2' : 'int32'})
-    
-    if by_role: 
-        grouped = df.groupby(['role_1', 'role_2'])
+            deg_1[k] = degs[u] - discount
+            deg_2[k] = degs[v] - discount
+            deg_1[k + 1] = degs[u] - discount
+            deg_2[k + 1] = degs[v] - discount
+
+    # construct a DataFrame with the results.
+
+    role_1 = role_1.astype("U" + str(max_len))
+    role_2 = role_2.astype("U" + str(max_len))
+
+    df = pd.DataFrame(
+        {"role_1": role_1, "role_2": role_2, "deg_1": deg_1, "deg_2": deg_2}
+    )
+
+    df = df.astype({"deg_1": "int32", "deg_2": "int32"})
+
+    if by_role:
+        grouped = df.groupby(["role_1", "role_2"])
         if spearman:
-            df['deg_1'] = grouped['deg_1'].rank()
-            df['deg_2'] = grouped['deg_2'].rank()
-        
-        df = df.groupby(['role_1', 'role_2'])    
-        corrs = df.corr().iloc[0::2,-1]
+            df["deg_1"] = grouped["deg_1"].rank()
+            df["deg_2"] = grouped["deg_2"].rank()
+
+        df = df.groupby(["role_1", "role_2"])
+        corrs = df.corr().iloc[0::2, -1]
     else:
         if spearman:
-            df['deg_1'] = df['deg_1'].rank()
-            df['deg_2'] = df['deg_2'].rank()
-        corrs = df.corr().iloc[0::2,-1]
+            df["deg_1"] = df["deg_1"].rank()
+            df["deg_2"] = df["deg_2"].rank()
+        corrs = df.corr().iloc[0::2, -1]
 
     return pd.DataFrame(corrs)
-  
+
 
 def multiway_spectral(A, A0, k):
-    
-# implementation(?) of Zhang + Newman on multiway spectral partitioning
-    
+
+    # implementation(?) of Zhang + Newman on multiway spectral partitioning
+
     B = A - A0
-    
+
     n = B.shape[0]
-    m = A.sum()/2
-    
-    
-    eigen = eigh(B, eigvals = (n-k, n-1))
+    m = A.sum() / 2
+
+    eigen = eigh(B, eigvals=(n - k, n - 1))
 
     lam = eigen[0]
     U = eigen[1]
 
     # vertex vectors (eq (10))
 
-    r = np.sqrt(lam)*U 
+    r = np.sqrt(lam) * U
 
     ix = np.random.randint(0, n, k)
 
     # initialize community vectors
-    R = r[ix,:]
+    R = r[ix, :]
 
     # random assignments
     ix = np.random.randint(0, k, n)
-    L = np.zeros((n,k))
+    L = np.zeros((n, k))
     L[np.arange(n), ix] = 1
     L_old = L.copy()
-    
+
     ell_old = np.zeros(n)
-    
+
     for j in range(100):
         # # until convergence
 
-        Rr = np.dot(r, R.T) 
-        
+        Rr = np.dot(r, R.T)
+
         # current assignment
-        ell = np.argmax(Rr, axis = 1)
+        ell = np.argmax(Rr, axis=1)
         L = np.zeros((n, k))
         L[np.arange(n), ell] = 1
         ell = L.argmax(axis=1)
-        R = np.dot(L.T,r)
+        R = np.dot(L.T, r)
 
-        obj = (1 / (2*m))*(R**2).sum()
-        
+        obj = (1 / (2 * m)) * (R ** 2).sum()
+
         if (ell == ell_old).mean() == 1:
             break
         ell_old = ell.copy()
-        
-    return(ell, obj)
 
-def MI(X, Y, normalize = False, return_joint = False):
+    return (ell, obj)
+
+
+def MI(X, Y, normalize=False, return_joint=False):
     # assumes X and Y are vectors of integer labels of the same length and on the same alphabet space
     n = len(X)
     k = max(X.max(), Y.max())
-    joint = np.zeros((k+1, k+1))
-    p_x = np.zeros(k+1)
-    p_y = np.zeros(k+1)
-    
+    joint = np.zeros((k + 1, k + 1))
+    p_x = np.zeros(k + 1)
+    p_y = np.zeros(k + 1)
+
     for i in range(n):
         joint[X[i], Y[i]] += 1
         p_x[X[i]] += 1
         p_y[Y[i]] += 1
     joint = joint / joint.sum()
-    
-    p_x = p_x/p_x.sum()
-    p_y = p_y/p_y.sum()
-    
-    mat = (joint*np.log(joint / np.outer(p_x, p_y)))
+
+    p_x = p_x / p_x.sum()
+    p_y = p_y / p_y.sum()
+
+    mat = joint * np.log(joint / np.outer(p_x, p_y))
     mat[np.isnan(mat)] = 0
-    
+
     I_XY = mat.sum()
-    
-    if normalize: 
-        H_x = -p_x*np.log(p_x)
+
+    if normalize:
+        H_x = -p_x * np.log(p_x)
         H_x[np.isnan(H_x)] = 0
         H_x = H_x.sum()
-        
-        H_y = -p_y*np.log(p_y)
+
+        H_y = -p_y * np.log(p_y)
         H_y[np.isnan(H_y)] = 0
         H_y = H_y.sum()
-    
-        NMI = I_XY/(.5*(H_x + H_y))
+
+        NMI = I_XY / (0.5 * (H_x + H_y))
         out = NMI
     else:
         out = I_XY
-    
+
     if return_joint:
-        return(out, joint)
+        return (out, joint)
     else:
-        return(out)
+        return out
