@@ -551,7 +551,7 @@ def mutual_information_of_roles(annotated_hypergraph):
     with np.errstate(divide="ignore", invalid="ignore"):
         M = local_role_density(annotated_hypergraph, as_array=True)
         p_ = M.mean(axis=0)
-        return 1 / A.n * np.nansum((np.log(M / p_) * M))
+        return 1 / annotated_hypergraph.n * np.nansum((np.log(M / p_) * M))
 
 
 def MI(X, Y, normalize=False, return_joint=False):
