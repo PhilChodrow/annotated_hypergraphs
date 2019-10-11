@@ -53,7 +53,7 @@ class AnnotatedHypergraph(object):
         # Assign edge ids if not already present
         if records[0].get("eid") is None:
             for i in range(len(records)):
-                records[i]["eid"] = i + 1
+                records[i]["eid"] = i
 
         IL = incidence_list_from_records(records, roles)
 
@@ -223,7 +223,7 @@ class AnnotatedHypergraph(object):
         while N < n_steps:
 
             # select two random hyperedges
-            i, j = np.random.randint(1, self.m + 1, 2)
+            i, j = np.random.randint(0, self.m, 2)
             E0, E1 = edges[i], edges[j]
 
             # select a random node-edge incidence from each
