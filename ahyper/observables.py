@@ -55,16 +55,19 @@ def local_role_density(
     keys = set(chain.from_iterable(densities.values()))
     for item in densities.values():
         item.update({key: 0 for key in keys if key not in item})
-    
-    if not absolute_values: 
+
+    if not absolute_values:
         normalise_counters(densities)
-    
+
     if as_array:
         densities = to_matrix(densities, A)
-        
-    return(densities)
 
-def node_role_participation(annotated_hypergraph, absolute_values=False, as_array=False):
+    return densities
+
+
+def node_role_participation(
+    annotated_hypergraph, absolute_values=False, as_array=False
+):
     """
     Calculates the proportion of instances where each node is in each role.
 
@@ -90,13 +93,13 @@ def node_role_participation(annotated_hypergraph, absolute_values=False, as_arra
     for item in densities.values():
         item.update({key: 0 for key in keys if key not in item})
 
-    if not absolute_values: 
+    if not absolute_values:
         normalise_counters(densities)
-    
+
     if as_array:
         densities = to_matrix(densities, A)
-        
-    return(densities)
+
+    return densities
 
 
 def _degree_centrality(weighted_projection):
@@ -540,6 +543,17 @@ def multiway_spectral(A, A0, k):
     return (ell, obj)
 
 
+def mutual_information_of_roles(annotated_hypergraph):
+    """
+    Calculates the mutual information between an individuals' roles and the roles of their neighbours.
+    """
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        M = local_role_density(annotated_hypergraph, as_array=True)
+        p_ = M.mean(axis=0)
+        return 1 / A.n * np.nansum((np.log(M / p_) * M))
+
+
 def MI(X, Y, normalize=False, return_joint=False):
     # assumes X and Y are vectors of integer labels of the same length and on the same alphabet space
     n = len(X)
@@ -581,14 +595,15 @@ def MI(X, Y, normalize=False, return_joint=False):
     else:
         return out
 
+
 def to_matrix(C, A):
-    '''
+    """
         Convert a counter, such as that returned by local_role_densities(), to a matrix in which each column corresponds to a role of A. 
-    '''
+    """
     M = np.zeros((len(C), len(A.roles)))
 
     k = list(C.keys())
     for i in range(len(k)):
         for j in range(len(A.roles)):
             M[k[i], j] = C[i][A.roles[j]]
-    return(M)
+    return M
