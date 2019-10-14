@@ -99,7 +99,9 @@ def entropy(iterable):
     """ Calculates the entropy of an iterable. """
     if iterable[0] is None:
         return None
-    return -sum([p * np.log2(p) for p in iterable if p > 0])
+    v = np.array([p for p in iterable if p > 0])
+    v = v / v.sum()
+    return (-(v * np.log2(v)).sum())
 
 
 def average_entropy(func):
